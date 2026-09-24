@@ -1,0 +1,36 @@
+:root { color-scheme: dark; }
+body { font: 18px system-ui; max-width: 1100px; margin: 32px auto; padding: 0 20px; background: #101722; color: #eef3ff; }
+header, .controls { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+header { justify-content: space-between; }
+a { color: #b9d7ff; }
+button, select, input { font: inherit; padding: 8px; margin: 6px 0; }
+button { cursor: pointer; } button:disabled { cursor: default; }
+label { display: inline-block; margin-right: 12px; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: 20px; }
+.captions { min-height: 150px; padding: 24px; background: #202d40; border-radius: 8px; font-size: 28px; overflow-wrap: anywhere; }
+.interim { color: #b9d7ff; }
+#status { min-height: 2em; }
+pre, .history { white-space: pre-wrap; overflow-wrap: anywhere; }
+summary { cursor: pointer; margin-top: 24px; }
+.viewer .captions { min-height: 240px; font-size: clamp(28px, 4vw, 48px); }
+button:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid #b9d7ff; outline-offset: 4px; }
+.room-card { background: #202d40; padding: 16px; border-radius: 8px; }
+.room-card h3 { margin-top: 0; }
+meter { width: 150px; height: 22px; }
+#qr { background: white; padding: 12px; max-width: 85%; }
+#audience-link { overflow-wrap: anywhere; }
+#share { margin-top: 36px; border-top: 1px solid #617089; }
+.stage { max-width: none; background: #000; }
+.stage h1, .stage details, .stage #note { display: none; }
+.stage .captions { background: #000; color: white; font-size: clamp(40px, 5vw, 84px); min-height: 50vh; }
+.stage .controls { font-size: 16px; }
+.demo { max-width: none; margin: 12px; }
+.demo h1 { font-size: 24px; }
+.demo-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.demo-layout iframe { width: 100%; height: 78vh; border: 1px solid #617089; border-radius: 8px; background: #101722; }
+.compact { margin: 10px auto; padding: 0 12px; font-size: 15px; }
+.compact h1 { font-size: 22px; }
+.compact h2 { font-size: 20px; }
+.compact #share, .compact section[aria-label="Estado de las salas"] { display: none; }
+.compact .captions { font-size: 20px; min-height: 50px; padding: 12px; }
+@media (max-width: 800px) { .demo-layout { grid-template-columns: 1fr; } }

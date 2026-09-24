@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nerdearla · Demo local</title>
+<link rel="stylesheet" href="/style.css">
+<body class="demo">
+<header><h1>Demo · Emisor y audiencia</h1><a href="/?session=B" target="_blank" rel="noopener">Abrir emisor de sala B ↗</a></header>
+<p>Vista local para grabar la demo. La izquierda emite audio; a la derecha se elige sala e idioma.</p>
+<div class="demo-layout">
+  <iframe src="/?session=A&compact=1" title="Emisor de sala A" allow="microphone"></iframe>
+  <iframe src="/viewer?session=A" title="Vista de audiencia"></iframe>
+</div>
+</body>
+</html>

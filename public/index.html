@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nerdearla · Emisor</title>
+<link rel="stylesheet" href="/style.css">
+<header><h1>Subtítulos en vivo</h1><a href="/viewer" target="_blank" rel="noopener">Abrir espectador ↗</a> <a href="/demo" target="_blank" rel="noopener">Vista para grabar demo ↗</a></header>
+<p>Control de producción · La captura continúa hasta Stop o una interrupción.</p>
+<section aria-label="Estado de las salas"><h2>Salas</h2><div id="rooms" class="panels">Consultando estado…</div></section>
+<div class="controls">
+  <label>Sesión <select id="session"><option>A</option><option>B</option></select></label>
+  <label>Idioma del audio <select id="language"><option value="en">Inglés</option><option value="es">Español</option></select></label>
+  <label>Fuente <select id="source"><option value="mic">Micrófono</option><option value="file">Archivo de audio</option></select></label>
+</div>
+<div id="mic-controls">
+  <label>Entrada de audio <select id="device"><option value="">Predeterminada de Windows</option></select></label>
+  <button id="devices">Detectar entradas</button>
+  <label>Tipo de entrada <select id="input-mode"><option value="line">Placa / entrada de línea</option><option value="mic">Micrófono ambiente</option></select></label>
+  <p>Conectá el cable de la placa y elegí la entrada que Windows reconoce. Detectar entradas solicita permiso de micrófono.</p>
+</div>
+<p><label><input type="checkbox" id="translate" checked> Traducir del inglés al español</label></p>
+<div id="file-controls" hidden>
+  <label>Archivo (hasta 3 minutos) <input id="file" type="file" accept="audio/*"></label>
+  <label><input id="monitor" type="checkbox"> Escuchar el archivo durante el envío</label>
+</div>
+<p>Al iniciar, este audio se envía a Gemini. El archivo se transmite a velocidad real.</p>
+<div><button id="start" disabled>Iniciar sesión</button> <button id="stop" disabled>Terminar</button></div>
+<p><label>Señal <meter id="level" min="0" max="1" value="0"></meter></label> <span id="signal">Sin captura</span> <button id="resume" hidden>Reanudar audio</button></p>
+<p id="status" role="status">Comprobando configuración…</p>
+<div class="panels">
+  <section><h2>Original</h2><div id="original" class="captions"></div></section>
+  <section><h2>Español</h2><div id="spanish" class="captions"></div></section>
+</div>
+<details open><summary>Registro de la prueba</summary>
+  <p>El texto provisional y la puntuación pueden cambiar. Los dos idiomas pueden llegar con distinto retardo.</p>
+  <pre id="metrics"></pre>
+  <h3>Texto original</h3><p id="original-history" class="history"></p>
+  <h3>Texto en español</h3><p id="spanish-history" class="history"></p>
+</details>
+<section id="share"><h2>Audiencia desde el celular</h2>
+  <p>Prueba opcional en casa: conectá el celular a la misma Wi-Fi. Este QR local no es un enlace público de entrega.</p>
+  <label>Red para compartir <select id="network"></select></label>
+  <p><a id="audience-link" target="_blank" rel="noopener"></a></p>
+  <img id="qr" width="240" height="240" alt="QR para abrir los subtítulos en el celular" hidden>
+  <p id="network-status" role="status">Buscando red…</p>
+</section>
+<script type="module" src="/app.js"></script>
+</html>

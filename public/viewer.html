@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nerdearla · Espectador</title>
+<link rel="stylesheet" href="/style.css">
+<body class="viewer">
+<h1>Elegí qué charla seguir</h1>
+<div class="controls">
+  <label>Sesión <select id="session"><option>A</option><option>B</option></select></label>
+  <label>Subtítulos <select id="language"><option value="es">Español</option><option value="original">Idioma original</option></select></label>
+  <button id="stage">Modo escenario</button><button id="fullscreen">Pantalla completa</button>
+</div>
+<p id="status" role="status">Conectando…</p>
+<div id="captions" class="captions" aria-label="Subtítulos de la sesión elegida"></div>
+<p id="note"></p>
+<details><summary>Texto de esta sesión</summary><p id="history" class="history"></p></details>
+<script type="module" src="/viewer.js"></script>
+</body>
+</html>
