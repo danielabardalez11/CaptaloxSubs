@@ -2,7 +2,9 @@
 .env.*
 !.env.example
 node_modules/
-recordings/
+recordings/*
+!recordings/demo-en.wav
+!recordings/demo-b-en.wav
 results/
 *.log
 Microsoft/

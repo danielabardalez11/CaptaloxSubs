@@ -18,13 +18,13 @@
   <label>Tipo de entrada <select id="input-mode"><option value="line">Placa / entrada de línea</option><option value="mic">Micrófono ambiente</option></select></label>
   <p>Conectá el cable de la placa y elegí la entrada que Windows reconoce. Detectar entradas solicita permiso de micrófono.</p>
 </div>
-<p><label><input type="checkbox" id="translate" checked> Traducir del inglés al español</label></p>
+<p><label><input type="checkbox" id="translate" checked> <span id="translate-label">Traducir del inglés al español</span></label></p>
 <div id="file-controls" hidden>
   <label>Archivo (hasta 3 minutos) <input id="file" type="file" accept="audio/*"></label>
   <label><input id="monitor" type="checkbox"> Escuchar el archivo durante el envío</label>
 </div>
 <p>Al iniciar, este audio se envía a Gemini. El archivo se transmite a velocidad real.</p>
-<div><button id="start" disabled>Iniciar sesión</button> <button id="stop" disabled>Terminar</button></div>
+<div><button id="start" disabled>Iniciar sesión</button> <button id="stop" disabled>Terminar</button> <button id="export-txt" type="button" title="Descargar transcripción en texto plano">Descargar .TXT</button> <button id="export-srt" type="button" title="Descargar subtítulos con tiempos .SRT">Descargar .SRT</button></div>
 <p><label>Señal <meter id="level" min="0" max="1" value="0"></meter></label> <span id="signal">Sin captura</span> <button id="resume" hidden>Reanudar audio</button></p>
 <p id="status" role="status">Comprobando configuración…</p>
 <div class="panels">

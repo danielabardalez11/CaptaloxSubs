@@ -59,3 +59,28 @@ test('REST: clave solo en cabecera, instrucción separada y salida completa', as
   await assert.rejects(translateText({ text: 'a', apiKey: 'fake-key', fetchImpl: async () => ({ ok: false, status: 429 }) }), /HTTP 429/);
   await assert.rejects(translateText({ text: 'a', apiKey: 'fake-key', fetchImpl: async () => ({ ok: true, json: async () => ({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: 'incompleta' }] } }] }) }) }), /no terminó/);
 });
+test('REST: soporte bidireccional ES a EN con glosario técnico', async () => {
+  let request;
+  const translated = await translateText({
+    apiKey: 'fake-key',
+    text: 'Hacemos un deploy en Kubernetes y abrimos un pull request',
+    from: 'es',
+    to: 'en',
+    fetchImpl: async (url, options) => {
+      request = { url, ...options };
+      return {
+        ok: true,
+        json: async () => ({
+          candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'We deploy to Kubernetes and open a pull request' }] } }]
+        })
+      };
+    }
+  });
+  assert.equal(translated, 'We deploy to Kubernetes and open a pull request');
+  const body = JSON.parse(request.body);
+  const sysInst = body.systemInstruction.parts[0].text;
+  assert.match(sysInst, /Spanish to English/);
+  assert.match(sysInst, /Kubernetes/);
+  assert.match(sysInst, /pull request/);
+});
+

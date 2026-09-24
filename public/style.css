@@ -49,3 +49,40 @@ meter { width: 150px; height: 22px; }
 .compact #share, .compact section[aria-label="Estado de las salas"] { display: none; }
 .compact .captions { font-size: 20px; min-height: 50px; padding: 12px; }
 @media (max-width: 800px) { .demo-layout { grid-template-columns: 1fr; } }
+
+/* OBS / vMix Transparent Streaming Overlay */
+.overlay {
+  background: transparent !important;
+  max-width: none;
+  margin: 0;
+  padding: 0 40px 30px 40px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-sizing: border-box;
+}
+.overlay header,
+.overlay .controls,
+.overlay #status,
+.overlay #note,
+.overlay details,
+.overlay .header-actions {
+  display: none !important;
+}
+.overlay .captions {
+  background: rgba(10, 16, 26, 0.88);
+  color: #ffffff;
+  border-radius: 12px;
+  font-size: clamp(30px, 3.5vw, 52px);
+  line-height: 1.35;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  min-height: auto;
+  max-height: 35vh;
+  overflow: hidden;
+}
+.overlay .interim {
+  color: #a5cbff;
+}

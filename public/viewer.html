@@ -5,11 +5,19 @@
 <title>Nerdearla · Espectador</title>
 <link rel="stylesheet" href="/style.css">
 <body class="viewer">
-<h1>Elegí qué charla seguir</h1>
+<header>
+  <h1>Elegí qué charla seguir</h1>
+  <div class="header-actions">
+    <a id="btn-obs" href="/viewer?session=A&overlay=1" target="_blank" rel="noopener" title="Abrir como overlay transparente para OBS Studio o vMix">Modo OBS / Stream ↗</a>
+  </div>
+</header>
 <div class="controls">
   <label>Sesión <select id="session"><option>A</option><option>B</option></select></label>
-  <label>Subtítulos <select id="language"><option value="es">Español</option><option value="original">Idioma original</option></select></label>
-  <button id="stage">Modo escenario</button><button id="fullscreen">Pantalla completa</button>
+  <label>Subtítulos <select id="language"><option value="es">Español</option><option value="en">Inglés / English</option><option value="original">Idioma original</option></select></label>
+  <button id="stage" type="button">Modo escenario</button>
+  <button id="fullscreen" type="button">Pantalla completa</button>
+  <button id="export-txt" type="button" title="Descargar transcripción completa acumulada en texto">Bajar .TXT</button>
+  <button id="export-srt" type="button" title="Descargar subtítulos estándar .SRT con marcas de tiempo">Bajar .SRT</button>
 </div>
 <p id="status" role="status">Conectando…</p>
 <div id="captions" class="captions" aria-label="Subtítulos de la sesión elegida"></div>

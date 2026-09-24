@@ -137,3 +137,20 @@ test('QR solo codifica direcciones locales disponibles del puerto de audiencia',
     assert.match(await qr.text(), /<svg/);
   }
 });
+test('exportación descarga transcripción en formato TXT y SRT', async (t) => {
+  const { host, rooms } = await app(t, { apiKey: 'fake', makeLive: (o) => new FakeLive(o) });
+  rooms.get('A').accept({ type: 'final', text: 'Primera frase de prueba.' });
+  rooms.get('A').accept({ type: 'final', text: 'Segunda frase.' });
+  const txtRes = await fetch(`http://${host}/export?session=A&format=txt`);
+  assert.equal(txtRes.status, 200);
+  assert.match(txtRes.headers.get('content-disposition'), /subtitulos-A-original\.txt/);
+  const txtBody = await txtRes.text();
+  assert.match(txtBody, /Primera frase de prueba\.\nSegunda frase\./);
+
+  const srtRes = await fetch(`http://${host}/export?session=A&format=srt`);
+  assert.equal(srtRes.status, 200);
+  assert.match(srtRes.headers.get('content-disposition'), /subtitulos-A-original\.srt/);
+  const srtBody = await srtRes.text();
+  assert.match(srtBody, /1\n\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}\nPrimera frase de prueba\./);
+  assert.match(srtBody, /2\n\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}\nSegunda frase\./);
+});

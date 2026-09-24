@@ -9,19 +9,34 @@ import { Room } from './room.js';
 import { audienceLinks } from './network.js';
 import QRCode from 'qrcode';
 
-export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process.env.GEMINI_TRANSCRIBE_MODEL || MODEL, translateModel = process.env.GEMINI_TEXT_MODEL || TEXT_MODEL, makeLive = (options) => new CaptionSession(options), drainMs } = {}) {
-  const rooms = new Map(['A', 'B'].map((id) => [id, new Room(id)]));
+export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process.env.GEMINI_TRANSCRIBE_MODEL || MODEL, translateModel = process.env.GEMINI_TEXT_MODEL || TEXT_MODEL, makeLive = (options) => new CaptionSession(options), drainMs, roomList = (process.env.ROOMS ? process.env.ROOMS.split(',').map((s) => s.trim().toUpperCase()) : ['A', 'B']) } = {}) {
+  const rooms = new Map(roomList.map((id) => [id, new Room(id)]));
   const owners = new Map();
   const viewers = new Map();
   const files = { '/': ['index.html', 'text/html'], '/viewer': ['viewer.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/viewer.js': ['viewer.js', 'text/javascript'], '/render.js': ['render.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/pcm-worklet.js': ['pcm-worklet.js', 'text/javascript'] };
   files['/demo'] = ['demo.html', 'text/html'];
-  const audienceFiles = new Set(['/viewer', '/viewer.js', '/render.js', '/style.css']);
+  const audienceFiles = new Set(['/viewer', '/viewer.js', '/render.js', '/style.css', '/export']);
   const handleHttp = (audienceOnly) => async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const url = new URL(req.url, 'http://localhost');
     let pathname = url.pathname;
     if (audienceOnly && pathname === '/') pathname = '/viewer';
+    if (pathname === '/export') {
+      const sessionId = (url.searchParams.get('session') || 'A').toUpperCase();
+      const format = url.searchParams.get('format') === 'srt' ? 'srt' : 'txt';
+      const lang = url.searchParams.get('lang') || 'original';
+      const room = rooms.get(sessionId);
+      if (!room) { res.writeHead(404); res.end('Sesión no encontrada'); return; }
+      const content = room.exportTranscript(format, lang);
+      const filename = `subtitulos-${sessionId}-${lang}.${format}`;
+      res.writeHead(200, {
+        'Content-Type': format === 'srt' ? 'application/x-subrip; charset=utf-8' : 'text/plain; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      });
+      res.end(content);
+      return;
+    }
     if (audienceOnly && !audienceFiles.has(pathname)) { res.writeHead(404); res.end('No encontrado'); return; }
     if (!audienceOnly && pathname === '/sessions') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -104,9 +119,9 @@ export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process
           if (!rooms.has(id)) throw new Error('Elegí la sesión A o B.');
           if (!['es', 'en', 'auto'].includes(message.language)) throw new Error('Idioma inválido.');
           if (owners.has(id)) throw new Error(`La sesión ${id} ya tiene un emisor. Elegí la otra sesión.`);
-          const translate = message.translate === true && message.language !== 'es';
+          const translate = message.translate === true && (message.language !== 'es' || message.targetLanguage === 'en');
           room = rooms.get(id); owners.set(id, ws); room.reset(message.language, translate); publish(room);
-          live = makeLive({ apiKey, model, textModel: translateModel, mode: translate ? 'translate' : 'transcribe', language: message.language });
+          live = makeLive({ apiKey, model, textModel: translateModel, mode: translate ? 'translate' : 'transcribe', language: message.language, targetLanguage: message.targetLanguage });
           live.on('event', (event) => {
             room.accept(event); publish(room); send(ws, event);
             if (event.type === 'error') ws.close();

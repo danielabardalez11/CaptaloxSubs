@@ -8,12 +8,20 @@ if (new URLSearchParams(location.search).get('compact') === '1') document.body.c
 if (['A', 'B'].includes(selection)) $('session').value = selection;
 function buttons(busy) {
   for (const id of inputs) $(id).disabled = busy;
-  $('translate').disabled = busy || $('language').value === 'es';
+  $('translate').disabled = busy;
   $('start').disabled = busy || !configured;
   if (!busy) $('stop').disabled = true;
 }
 $('source').onchange = () => { $('file-controls').hidden = $('source').value !== 'file'; $('mic-controls').hidden = $('source').value !== 'mic'; };
-$('language').onchange = () => buttons(Boolean(active));
+$('language').onchange = () => {
+  const isEs = $('language').value === 'es';
+  if ($('translate-label')) {
+    $('translate-label').textContent = isEs
+      ? 'Traducir del español al inglés (opcional jurados)'
+      : 'Traducir del inglés al español';
+  }
+  buttons(Boolean(active));
+};
 $('devices').onclick = async () => {
   $('devices').disabled = true;
   let permissionStream;
@@ -92,7 +100,13 @@ $('start').onclick = async () => {
     await run.context.audioWorklet.addModule('/pcm-worklet.js');
     status('Conectando con Gemini…');
     const ws = run.ws = new WebSocket(`ws://${location.host}/audio`);
-    ws.onopen = () => ws.send(JSON.stringify({ type: 'start', session: $('session').value, language: $('language').value, translate: $('translate').checked }));
+    ws.onopen = () => ws.send(JSON.stringify({
+      type: 'start',
+      session: $('session').value,
+      language: $('language').value,
+      translate: $('translate').checked,
+      targetLanguage: $('language').value === 'es' ? 'en' : 'es',
+    }));
     ws.onerror = () => fail(run, 'Falló la conexión con el servidor local.');
     ws.onclose = async () => {
       await releaseAudio(run);
@@ -184,3 +198,14 @@ try {
   $('network').onchange = showLink; showLink();
   if (!access.links.length) $('network-status').textContent = 'Sin dirección para audiencia. Comprobá Wi-Fi y el puerto de audiencia; luego recargá.';
 } catch { $('network-status').textContent = 'No se pudo preparar el enlace de audiencia.'; }
+
+if ($('export-txt')) {
+  $('export-txt').onclick = () => {
+    location.href = `/export?session=${encodeURIComponent($('session').value)}&format=txt`;
+  };
+}
+if ($('export-srt')) {
+  $('export-srt').onclick = () => {
+    location.href = `/export?session=${encodeURIComponent($('session').value)}&format=srt`;
+  };
+}
