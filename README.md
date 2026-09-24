@@ -62,16 +62,17 @@ Usamos `npm.cmd` para evitar conflictos con la política de ejecución de `npm.p
 2. Elegir sesión A o B, idioma inglés o español y fuente Micrófono.
 3. Para audio inglés, dejar marcada **Traducir del inglés al español**. En español se utiliza el original para ambas vistas; no se necesita otra traducción.
 4. Iniciar y permitir el micrófono. Hablar naturalmente, con pausas breves entre frases. Se envía el audio a Google mientras la sesión está activa.
-5. Abrir la vista de espectador, elegir la misma sesión y alternar **Español / Idioma original**.
+5. Abrir la vista de espectador, elegir la misma sesión y alternar **Español / Inglés / Idioma original**.
 6. Terminar. El micrófono se apaga y el servidor espera los últimos textos: 5 segundos para solo transcripción, 20 segundos para traducción.
 
-No se traduce español a inglés: el mínimo requerido es inglés a español. En una charla española, “Idioma original” y “Español” muestran el mismo contenido.
+El sistema soporta traducción bidireccional completa (EN ↔ ES) con glosario técnico de software (Kubernetes, backend, deploy, pull request, open source, etc.), lo que permite evaluar charlas tanto en inglés como en español.
 
 Para comparar idiomas, los paneles del emisor muestran ambos textos. No se alinean artificialmente frase por frase: cada flujo puede tener diferentes límites y retardo. El espectador recibe únicamente los eventos del canal seleccionado; elegir idioma no crea nuevas llamadas a Gemini.
 
 ## Demo reproducible de dos sesiones en una computadora
 
-Ya se generaron dos archivos ingleses en `recordings/` (ignorados por Git). Para regenerarlos en Windows con una voz inglesa instalada:
+El repositorio ya incluye dos grabaciones de prueba en `recordings/demo-en.wav` y `recordings/demo-b-en.wav` listas para usar sin necesidad de micrófono:
+
 
 ```powershell
 .\scripts\make-demo-audio.ps1
