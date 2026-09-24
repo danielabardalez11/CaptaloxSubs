@@ -154,3 +154,57 @@ test('exportación descarga transcripción en formato TXT y SRT', async (t) => {
   assert.match(srtBody, /1\n\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}\nPrimera frase de prueba\./);
   assert.match(srtBody, /2\n\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}\nSegunda frase\./);
 });
+test('soporta 6 escenarios simultáneos en paralelo con aislamiento total', async (t) => {
+  const roomList = ['A', 'B', 'C', 'D', 'E', 'F'];
+  const { host } = await app(t, {
+    apiKey: 'fake',
+    roomList,
+    makeLive: () => {
+      const live = new EventEmitter();
+      live.state = 'ready';
+      live.connect = async () => { live.emit('event', { type: 'ready' }); };
+      live.sendAudio = (data) => {
+        live.emit('event', { type: 'final', text: `Audio en ${data.toString()}` });
+      };
+      live.endAudio = () => {};
+      live.flush = async () => {};
+      live.close = () => { live.state = 'closed'; };
+      live.report = () => ({});
+      live.safe = (m) => m;
+      return live;
+    }
+  });
+
+  const viewers = await Promise.all(roomList.map(async (sessionId) => {
+    const viewer = await connectClient(host, '/watch');
+    viewer.send({ type: 'watch', session: sessionId });
+    await viewer.next((e) => e.session === sessionId);
+    return { sessionId, viewer };
+  }));
+
+  const producers = await Promise.all(roomList.map(async (sessionId) => {
+    const p = await connectClient(host, '/audio');
+    p.send({ type: 'start', session: sessionId, language: 'es' });
+    await p.next((e) => e.type === 'ready');
+    return { sessionId, producer: p };
+  }));
+
+  for (const { sessionId, producer } of producers) {
+    producer.send(Buffer.from(`charla-${sessionId}`));
+  }
+
+  for (const { sessionId, viewer } of viewers) {
+    const snapshot = await viewer.next((e) => e.session === sessionId && e.original.history.length > 0);
+    assert.equal(snapshot.original.history[0], `Audio en charla-${sessionId}`);
+    for (const other of roomList) {
+      if (other !== sessionId) {
+        assert.ok(!JSON.stringify(snapshot).includes(`charla-${other}`));
+      }
+    }
+  }
+
+  for (const { producer } of producers) {
+    producer.send({ type: 'stop' });
+  }
+});
+

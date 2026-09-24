@@ -167,21 +167,28 @@ window.addEventListener('pagehide', () => { active?.ws?.close(); active?.stream?
 
 // Read-only dashboard: each tab controls only the audio it captures.
 const labels = { idle: 'Sin iniciar', connecting: 'Conectando', live: 'En vivo', draining: 'Cerrando', ended: 'Terminada', error: 'Interrumpida' };
+const trackNames = { A: 'Principal', B: 'Secundario', C: 'Workshops', D: 'DevOps', E: 'AI & Data', F: 'Open Source' };
 async function updateRooms() {
   try {
     const rooms = await (await fetch('/sessions')).json();
     $('rooms').replaceChildren();
     for (const room of rooms) {
       const card = document.createElement('article'); card.className = 'room-card';
-      const title = document.createElement('h3'); title.textContent = `Sala ${room.session} · ${labels[room.status]}`;
+      const title = document.createElement('h3');
+      const track = trackNames[room.session] ? ` · ${trackNames[room.session]}` : '';
+      const statusBadge = room.status === 'live'
+        ? '<span class="badge-live">En vivo</span>'
+        : `<span style="font-size:12px; color:var(--text-muted); font-weight:normal;">${labels[room.status] || room.status}</span>`;
+      title.innerHTML = `<span>Sala ${room.session}${track}</span> ${statusBadge}`;
       const details = document.createElement('p');
       const stale = room.status === 'live' && (!room.lastAudioAt || Date.now() - room.lastAudioAt > 5000);
       details.textContent = `${room.viewers} espectadores · ${Math.round(room.audioSeconds)} s de audio${stale ? ' · Sin audio reciente' : ''}${room.message ? ` · ${room.message}` : ''}`;
-      const link = document.createElement('a'); link.href = `/?session=${room.session}`; link.target = '_blank'; link.rel = 'noopener'; link.textContent = `Abrir control de sala ${room.session}`;
+      const link = document.createElement('a'); link.href = `/?session=${room.session}`; link.target = '_blank'; link.rel = 'noopener'; link.textContent = `Abrir control de sala ${room.session} ↗`;
       card.append(title, details, link); $('rooms').append(card);
     }
   } catch { $('rooms').textContent = 'No se pudo consultar el estado del servidor.'; }
 }
+
 await updateRooms();
 const dashboardTimer = setInterval(updateRooms, 2000);
 window.addEventListener('pagehide', () => clearInterval(dashboardTimer));

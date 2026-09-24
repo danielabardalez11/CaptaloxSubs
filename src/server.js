@@ -93,13 +93,14 @@ export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process
     ws.alive = true; ws.on('pong', () => { ws.alive = true; });
     ws.on('error', () => ws.close());
     if (route === '/watch') {
-      viewers.set(ws, 'A'); send(ws, rooms.get('A').snapshot());
+      const defaultRoom = rooms.keys().next().value || 'A';
+      viewers.set(ws, defaultRoom); send(ws, rooms.get(defaultRoom).snapshot());
       ws.on('message', (data, binary) => {
         try {
           const message = binary ? {} : JSON.parse(data.toString());
           if (message.type !== 'watch' || !rooms.has(message.session)) throw new Error('Sesión inválida.');
           viewers.set(ws, message.session); send(ws, rooms.get(message.session).snapshot());
-        } catch { send(ws, { type: 'error', message: 'Elegí la sesión A o B.' }); ws.close(); }
+        } catch { send(ws, { type: 'error', message: `Elegí una sala válida (${[...rooms.keys()].join(' o ')}).` }); ws.close(); }
       });
       ws.on('close', () => viewers.delete(ws));
       return;
@@ -116,9 +117,9 @@ export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process
         if (message.type === 'start' && !started) {
           started = true;
           const id = message.session || 'A';
-          if (!rooms.has(id)) throw new Error('Elegí la sesión A o B.');
+          if (!rooms.has(id)) throw new Error(`Elegí una sala válida (${[...rooms.keys()].join(' o ')}).`);
           if (!['es', 'en', 'auto'].includes(message.language)) throw new Error('Idioma inválido.');
-          if (owners.has(id)) throw new Error(`La sesión ${id} ya tiene un emisor. Elegí la otra sesión.`);
+          if (owners.has(id)) throw new Error(`La sesión ${id} ya tiene un emisor. Elegí otra sesión.`);
           const translate = message.translate === true && (message.language !== 'es' || message.targetLanguage === 'en');
           room = rooms.get(id); owners.set(id, ws); room.reset(message.language, translate); publish(room);
           live = makeLive({ apiKey, model, textModel: translateModel, mode: translate ? 'translate' : 'transcribe', language: message.language, targetLanguage: message.targetLanguage });

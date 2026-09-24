@@ -1,18 +1,24 @@
 <!doctype html>
 <html lang="es">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nerdearla · Grabación de Demo (1–2 min)</title>
-<link rel="stylesheet" href="/style.css">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nerdearla 2026 · Grabación de Demo (1–2 min)</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
 <body class="demo">
 <header>
   <div>
-    <h1>Demo · Emisor y Audiencia</h1>
-    <div class="demo-subtitle">Vista integrada para grabar el video de entrega de 1 a 2 minutos</div>
+    <h1>
+      Nerdearla 2026
+      <span class="brand-badge">Consola de Evaluación</span>
+    </h1>
+    <div class="demo-subtitle">Vista integrada de producción y audiencia para ensayar y grabar el video de entrega</div>
   </div>
   <div class="demo-links">
-    <a href="/?session=A" target="_blank" rel="noopener">Emisor A ↗</a>
-    <a href="/?session=B" target="_blank" rel="noopener">Emisor B ↗</a>
+    <a href="/?session=A" target="_blank" rel="noopener">Emisor A (Principal) ↗</a>
+    <a href="/?session=B" target="_blank" rel="noopener">Emisor B (Secundario) ↗</a>
+    <a href="/?session=C" target="_blank" rel="noopener">Emisor C (Workshops) ↗</a>
     <a href="/viewer" target="_blank" rel="noopener">Audiencia ↗</a>
   </div>
 </header>
@@ -23,7 +29,7 @@
     <div class="script-step">
       <span class="step-time">0:00 – 0:15</span>
       <strong>1. Introducción</strong>
-      <p>Presentá: "MVP de subtítulos en vivo para Nerdearla 2026. A la izquierda tenemos el panel de producción del operador y a la derecha la pantalla de la audiencia."</p>
+      <p>Presentá: "MVP de subtítulos en vivo para Nerdearla 2026. A la izquierda tenemos el panel de producción del operador y a la derecha la pantalla de la audiencia o escenario."</p>
     </div>
     <div class="script-step">
       <span class="step-time">0:15 – 0:45</span>
@@ -38,16 +44,17 @@
     <div class="script-step">
       <span class="step-time">1:15 – 1:30</span>
       <strong>4. Cierre y Arquitectura</strong>
-      <p>Pulsá 'Terminar'. Explicá: claves seguras en servidor, puerto de audiencia 3001 aislado con QR para celulares y 100% free tier de Gemini sin costos.</p>
+      <p>Pulsá 'Terminar'. Explicá: claves seguras en servidor, puerto de audiencia 3001 aislado con QR para celulares, soporte para 6+ salas y 100% free tier de Gemini sin costos.</p>
     </div>
   </div>
 </details>
 
 <div class="demo-toolbar">
-  <span><strong>Emisor:</strong></span>
-  <button id="btn-show-a" class="active" type="button">Sala A</button>
-  <button id="btn-show-b" type="button">Sala B</button>
-  <button id="btn-show-both" type="button">Ambas salas</button>
+  <span><strong>Emisor en vista:</strong></span>
+  <button id="btn-show-a" class="active" type="button">Sala A (Principal)</button>
+  <button id="btn-show-b" type="button">Sala B (Secundario)</button>
+  <button id="btn-show-c" type="button">Sala C (Workshops)</button>
+  <button id="btn-show-both" type="button">Salas A y B en paralelo</button>
   <span style="flex: 1"></span>
   <span><strong>Audiencia en vivo:</strong> Puerto 3001</span>
 </div>
@@ -56,6 +63,7 @@
   <div id="emitters-container" class="emitters-single">
     <iframe id="frame-a" src="/?session=A&compact=1" title="Emisor de sala A" allow="microphone"></iframe>
     <iframe id="frame-b" src="/?session=B&compact=1" title="Emisor de sala B" allow="microphone" hidden></iframe>
+    <iframe id="frame-c" src="/?session=C&compact=1" title="Emisor de sala C" allow="microphone" hidden></iframe>
   </div>
   <iframe id="frame-viewer" src="/viewer?session=A" title="Vista de audiencia"></iframe>
 </div>
@@ -63,33 +71,45 @@
 <script>
   const frameA = document.getElementById('frame-a');
   const frameB = document.getElementById('frame-b');
+  const frameC = document.getElementById('frame-c');
   const emitters = document.getElementById('emitters-container');
   const btnA = document.getElementById('btn-show-a');
   const btnB = document.getElementById('btn-show-b');
+  const btnC = document.getElementById('btn-show-c');
   const btnBoth = document.getElementById('btn-show-both');
 
   function setMode(mode) {
     btnA.classList.toggle('active', mode === 'a');
     btnB.classList.toggle('active', mode === 'b');
+    btnC.classList.toggle('active', mode === 'c');
     btnBoth.classList.toggle('active', mode === 'both');
 
     if (mode === 'a') {
       emitters.className = 'emitters-single';
       frameA.hidden = false;
       frameB.hidden = true;
+      frameC.hidden = true;
     } else if (mode === 'b') {
       emitters.className = 'emitters-single';
       frameA.hidden = true;
       frameB.hidden = false;
+      frameC.hidden = true;
+    } else if (mode === 'c') {
+      emitters.className = 'emitters-single';
+      frameA.hidden = true;
+      frameB.hidden = true;
+      frameC.hidden = false;
     } else {
       emitters.className = 'emitters-both';
       frameA.hidden = false;
       frameB.hidden = false;
+      frameC.hidden = true;
     }
   }
 
   btnA.onclick = () => setMode('a');
   btnB.onclick = () => setMode('b');
+  btnC.onclick = () => setMode('c');
   btnBoth.onclick = () => setMode('both');
 </script>
 </body>

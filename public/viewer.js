@@ -9,8 +9,12 @@ if (initial.get('overlay') === '1') document.body.classList.add('overlay');
 try {
   const savedSession = localStorage.getItem('nerdearla_session');
   const savedLanguage = localStorage.getItem('nerdearla_language');
-  if (['A', 'B'].includes(initial.get('session'))) $('session').value = initial.get('session');
-  else if (['A', 'B'].includes(savedSession)) $('session').value = savedSession;
+  const validSessions = [...$('session').options].map((o) => o.value);
+  if (initial.get('session') && validSessions.includes(initial.get('session').toUpperCase())) {
+    $('session').value = initial.get('session').toUpperCase();
+  } else if (savedSession && validSessions.includes(savedSession)) {
+    $('session').value = savedSession;
+  }
   if (['es', 'en', 'original'].includes(initial.get('language'))) $('language').value = initial.get('language');
   else if (['es', 'en', 'original'].includes(savedLanguage)) $('language').value = savedLanguage;
 } catch {}
@@ -30,6 +34,8 @@ function render() {
   if (choice !== 'original' && latest.translationError) $('captions').append(document.createTextNode(` ⚠ ${latest.translationError}`));
   $('history').textContent = captionText(captions);
   $('status').textContent = roomStatus(latest);
+  const liveIndicator = $('live-indicator');
+  if (liveIndicator) liveIndicator.style.display = latest.status === 'live' ? 'inline-flex' : 'none';
 
   const note = latest.language === 'es'
     ? (choice === 'en' ? (latest.translate ? 'Traducción al inglés en vivo.' : 'Charla en español (traducción al inglés desactivada).') : 'La charla es en español.')
