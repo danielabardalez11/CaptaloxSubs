@@ -2,14 +2,95 @@
 <html lang="es">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nerdearla · Demo local</title>
+<title>Nerdearla · Grabación de Demo (1–2 min)</title>
 <link rel="stylesheet" href="/style.css">
 <body class="demo">
-<header><h1>Demo · Emisor y audiencia</h1><a href="/?session=B" target="_blank" rel="noopener">Abrir emisor de sala B ↗</a></header>
-<p>Vista local para grabar la demo. La izquierda emite audio; a la derecha se elige sala e idioma.</p>
-<div class="demo-layout">
-  <iframe src="/?session=A&compact=1" title="Emisor de sala A" allow="microphone"></iframe>
-  <iframe src="/viewer?session=A" title="Vista de audiencia"></iframe>
+<header>
+  <div>
+    <h1>Demo · Emisor y Audiencia</h1>
+    <div class="demo-subtitle">Vista integrada para grabar el video de entrega de 1 a 2 minutos</div>
+  </div>
+  <div class="demo-links">
+    <a href="/?session=A" target="_blank" rel="noopener">Emisor A ↗</a>
+    <a href="/?session=B" target="_blank" rel="noopener">Emisor B ↗</a>
+    <a href="/viewer" target="_blank" rel="noopener">Audiencia ↗</a>
+  </div>
+</header>
+
+<details class="demo-script" open>
+  <summary><strong>🎬 Guion guiado para grabar la demo (1:30 min)</strong> — <em>(Hacé clic para plegar o desplegar)</em></summary>
+  <div class="script-grid">
+    <div class="script-step">
+      <span class="step-time">0:00 – 0:15</span>
+      <strong>1. Introducción</strong>
+      <p>Presentá: "MVP de subtítulos en vivo para Nerdearla 2026. A la izquierda tenemos el panel de producción del operador y a la derecha la pantalla de la audiencia."</p>
+    </div>
+    <div class="script-step">
+      <span class="step-time">0:15 – 0:45</span>
+      <strong>2. Sala A (Audio y Traducción)</strong>
+      <p>En Emisor A, elegí Archivo (demo-en.wav) o Micrófono con 'Traducir al español' activo. Dale 'Iniciar sesión'. Mostrá en Audiencia cómo llega el original y la traducción al español en vivo.</p>
+    </div>
+    <div class="script-step">
+      <span class="step-time">0:45 – 1:15</span>
+      <strong>3. Sala B y Cambio de Canal</strong>
+      <p>Cambiá el emisor a Sala B e iniciá demo-b-en.wav. En la audiencia, cambiá de Sala A a B: demostrá que no se mezclan los textos y alterná entre 'Español' e 'Idioma original'.</p>
+    </div>
+    <div class="script-step">
+      <span class="step-time">1:15 – 1:30</span>
+      <strong>4. Cierre y Arquitectura</strong>
+      <p>Pulsá 'Terminar'. Explicá: claves seguras en servidor, puerto de audiencia 3001 aislado con QR para celulares y 100% free tier de Gemini sin costos.</p>
+    </div>
+  </div>
+</details>
+
+<div class="demo-toolbar">
+  <span><strong>Emisor:</strong></span>
+  <button id="btn-show-a" class="active" type="button">Sala A</button>
+  <button id="btn-show-b" type="button">Sala B</button>
+  <button id="btn-show-both" type="button">Ambas salas</button>
+  <span style="flex: 1"></span>
+  <span><strong>Audiencia en vivo:</strong> Puerto 3001</span>
 </div>
+
+<div id="layout" class="demo-layout">
+  <div id="emitters-container" class="emitters-single">
+    <iframe id="frame-a" src="/?session=A&compact=1" title="Emisor de sala A" allow="microphone"></iframe>
+    <iframe id="frame-b" src="/?session=B&compact=1" title="Emisor de sala B" allow="microphone" hidden></iframe>
+  </div>
+  <iframe id="frame-viewer" src="/viewer?session=A" title="Vista de audiencia"></iframe>
+</div>
+
+<script>
+  const frameA = document.getElementById('frame-a');
+  const frameB = document.getElementById('frame-b');
+  const emitters = document.getElementById('emitters-container');
+  const btnA = document.getElementById('btn-show-a');
+  const btnB = document.getElementById('btn-show-b');
+  const btnBoth = document.getElementById('btn-show-both');
+
+  function setMode(mode) {
+    btnA.classList.toggle('active', mode === 'a');
+    btnB.classList.toggle('active', mode === 'b');
+    btnBoth.classList.toggle('active', mode === 'both');
+
+    if (mode === 'a') {
+      emitters.className = 'emitters-single';
+      frameA.hidden = false;
+      frameB.hidden = true;
+    } else if (mode === 'b') {
+      emitters.className = 'emitters-single';
+      frameA.hidden = true;
+      frameB.hidden = false;
+    } else {
+      emitters.className = 'emitters-both';
+      frameA.hidden = false;
+      frameB.hidden = false;
+    }
+  }
+
+  btnA.onclick = () => setMode('a');
+  btnB.onclick = () => setMode('b');
+  btnBoth.onclick = () => setMode('both');
+</script>
 </body>
 </html>

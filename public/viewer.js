@@ -3,8 +3,14 @@ const $ = (id) => document.getElementById(id);
 let ws, latest, retry, disposed = false;
 const socketUrl = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/watch`;
 const initial = new URLSearchParams(location.search);
-if (['A', 'B'].includes(initial.get('session'))) $('session').value = initial.get('session');
-if (['es', 'original'].includes(initial.get('language'))) $('language').value = initial.get('language');
+try {
+  const savedSession = localStorage.getItem('nerdearla_session');
+  const savedLanguage = localStorage.getItem('nerdearla_language');
+  if (['A', 'B'].includes(initial.get('session'))) $('session').value = initial.get('session');
+  else if (['A', 'B'].includes(savedSession)) $('session').value = savedSession;
+  if (['es', 'original'].includes(initial.get('language'))) $('language').value = initial.get('language');
+  else if (['es', 'original'].includes(savedLanguage)) $('language').value = savedLanguage;
+} catch {}
 function render() {
   if (!latest || latest.session !== $('session').value) return;
   const spanish = $('language').value === 'es';
@@ -37,8 +43,14 @@ function connect() {
   };
   ws.onerror = () => ws.close();
 }
-$('session').onchange = select;
-$('language').onchange = render;
+$('session').onchange = () => {
+  try { localStorage.setItem('nerdearla_session', $('session').value); } catch {}
+  select();
+};
+$('language').onchange = () => {
+  try { localStorage.setItem('nerdearla_language', $('language').value); } catch {}
+  render();
+};
 $('stage').onclick = () => {
   const enabled = document.body.classList.toggle('stage');
   $('stage').textContent = enabled ? 'Salir de modo escenario' : 'Modo escenario';

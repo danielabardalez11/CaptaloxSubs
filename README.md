@@ -48,8 +48,10 @@ npm.cmd test
 npm.cmd start
 ```
 
-- **Emisor:** <http://localhost:3000>
-- **Espectador:** <http://localhost:3000/viewer>
+- **Emisor / Operador:** <http://localhost:3000>
+- **Espectador / Pantalla de escenario:** <http://localhost:3000/viewer>
+- **Vista integrada para grabar demo (1–2 min):** <http://localhost:3000/demo>
+- **Puerto seguro de audiencia / celular:** <http://localhost:3001/viewer> (con código QR generado en el emisor)
 - Detener servidor: `Ctrl+C`. Para aplicar cambios de código o `.env`, detener y volver a ejecutar `npm.cmd start`.
 
 Usamos `npm.cmd` para evitar conflictos con la política de ejecución de `npm.ps1`; no hace falta cambiar esa política. La clave se carga al arrancar. `git check-ignore .env` debe imprimir `.env`.
@@ -152,18 +154,41 @@ Pruebas sin red externa ni clave: lectura WAV, PCM, AudioWorklet, protocolo simu
 - **Texto incompleto o solo al final:** registrar el caso como fallo. No dar por aprobada la prueba porque haya conectado.
 - **Signos de pregunta inesperados:** la puntuación la infiere el modelo. Una pausa puede influir, pero no se debe atribuir una causa sin comparar con el audio.
 
-## Escalabilidad
+## Seguridad de red y escalabilidad
 
-El servidor escucha solo en `127.0.0.1`: permite demostrar varios espectadores en pestañas de la misma computadora, no acceso desde otros dispositivos. Para compartirlo por red se necesitan un despliegue con HTTPS/WSS, autorización de emisores y gestión de secretos; eso queda fuera de esta demo local.
+- **Separación de puertos por diseño**:
+  - **Puerto 3000 (Operador/Emisor)**: Escucha únicamente en `127.0.0.1` (loopback). Nunca es accesible desde la red local ni expone la API key de Gemini.
+  - **Puerto 3001 (Audiencia)**: Escucha en `0.0.0.0`. Solo expone `/viewer`, estilos y el WebSocket de solo lectura `/watch`. Cualquier intento de enviar audio, acceder a `/health`, `/sessions` o archivos internos devuelve `404 Not Found`.
+- **Escalabilidad de audiencia**: Cada charla crea exactamente una conexión a Gemini, sin importar si hay 1 o 500 espectadores conectados al WebSocket local. La audiencia consume únicamente distribución local de texto, sin generar llamadas adicionales a la API ni consumir cuota de Google.
 
-Cada charla crea una conexión Gemini, independientemente de la cantidad de espectadores. Agregar espectadores incrementa la distribución de texto, no la cantidad de transcripciones. El historial y las colas tienen límites. Para muchas charlas: distribuir sesiones entre procesos, usar un bus de mensajes y gestionar reconexión. La cuota real admite las dos conexiones del ensayo registrado; no se midió una carga mayor ni se fijaron costos. Revisar uso y facturación de la cuenta antes de ampliar.
+## Opciones gratuitas para compartir la vista de audiencia
 
-## Demo de 1–2 minutos y preparación final
+Si se desea mostrar la vista de espectador en un celular o proyector remoto durante una demo:
 
-- **0:00–0:15:** explicar el problema y mostrar emisor/espectador.
-- **0:15–0:40:** iniciar los dos archivos; mostrar A en original y español.
-- **0:40–1:05:** mostrar B y cambiar de canal sin mezclar las charlas.
-- **1:05–1:25:** comprobar las últimas frases y enseñar métricas.
-- **1:25–1:45:** explicar una conexión por charla, clave en servidor y límites reales.
+1. **Red local Wi-Fi con código QR (Cero instalación)**:
+   - Conectar el celular a la misma red Wi-Fi de la computadora.
+   - En PowerShell como Administrador, habilitar la regla de firewall local para el puerto 3001:
+     ```powershell
+     .\scripts\audience-firewall.ps1
+     ```
+   - Escanear el código QR generado automáticamente en el panel del emisor (`http://localhost:3000`).
+2. **Túnel temporal gratuito con Cloudflare (HTTPS público en 1 comando)**:
+   - Sin registrar tarjeta ni crear cuenta:
+     ```powershell
+     cloudflared tunnel --url http://localhost:3001
+     ```
+   - Cloudflare genera una URL `https://*.trycloudflare.com` segura que dirige únicamente al visor de subtítulos.
+3. **ngrok gratuito**:
+   ```powershell
+   ngrok http 3001
+   ```
 
-Antes de entregar, completar los pendientes visuales de `docs/VALIDATION.md`, repetir instalación con `npm.cmd ci`, ejecutar pruebas y ensayar la demo. Reservar las últimas **2 horas** antes del límite para estas verificaciones y corregir fallos; no priorizar diseño opcional.
+## Demo de 1–2 minutos: Guion paso a paso
+
+Para grabar el video de evaluación en una sola pantalla sin cambiar de ventanas, abrir:
+👉 **<http://localhost:3000/demo>**
+
+- **0:00–0:15 (Introducción)**: Presentar el MVP: "Subtítulos en tiempo real para Nerdearla 2026. A la izquierda tenemos el panel de control del emisor y a la derecha la pantalla de la audiencia o escenario."
+- **0:15–0:40 (Sala A: Audio y traducción)**: En el Emisor A, seleccionar Archivo (`demo-en.wav`) o Micrófono con 'Traducir al español' activo y pulsar **Iniciar sesión**. Mostrar cómo llegan las frases originales y la traducción inmediata al español en el panel de audiencia.
+- **0:40–1:10 (Sala B y cambio de sala)**: Cambiar a Sala B (`demo-b-en.wav`) e iniciar. En el visor de audiencia, cambiar de Sala A a B: demostrar que no se mezclan los temas (taller vs bicicleta) y alternar entre 'Español' e 'Idioma original'.
+- **1:10–1:30 (Cierre y arquitectura)**: Pulsar **Terminar**. Destacar: API Key protegida en el servidor, puerto de audiencia 3001 aislado con QR para celulares y 100% operativo en el free-tier de Gemini (presupuesto $0).
