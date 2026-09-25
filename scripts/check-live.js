@@ -10,7 +10,8 @@ import { captionText } from '../public/render.js';
 
 const { server, audienceServer, wss } = createApp();
 const clients = [];
-const report = { date: new Date().toISOString(), source: 'Dos voces sintéticas inglesas enviadas a velocidad real; API real; clientes WebSocket programáticos.', passed: false, sessions: {} };
+const producers = new Map();
+const report = { date: new Date().toISOString(), source: `Dos voces sintéticas inglesas enviadas a velocidad real; reconocimiento ${process.env.SPEECH_PROVIDER === 'local' ? 'Vosk local' : 'Gemini real'}; clientes WebSocket programáticos.`, passed: false, sessions: {} };
 async function connect(host, route) { const client = await connectClient(host, route); clients.push(client); return client; }
 async function stream(client, pcm) {
   const start = performance.now();
@@ -34,21 +35,33 @@ try {
   const [viewerA, viewerB] = await Promise.all([connect(audienceHost, '/watch'), connect(audienceHost, '/watch')]);
   viewerB.send({ type: 'watch', session: 'B' }); await viewerB.next((e) => e.session === 'B');
   const [a, b] = await Promise.all([connect(host, '/audio'), connect(host, '/audio')]);
+  producers.set('A', a); producers.set('B', b);
   for (const [client, session] of [[a, 'A'], [b, 'B']]) client.send({ type: 'start', session, language: 'en', translate: true });
   for (const client of [a, b]) {
     const event = await client.next((e) => e.type === 'ready' || e.type === 'error', 20000);
     if (event.type === 'error') throw new Error(event.message);
   }
-  console.log('Ambas conexiones Gemini listas. Enviando A y B en paralelo…');
+  console.log('Ambos reconocedores listos. Enviando A y B en paralelo…');
   const [doneA, doneB] = await Promise.all([stream(a, audios[0]), stream(b, audios[1])]);
   const snapA = await viewerA.next((e) => e.session === 'A' && e.status === 'ended');
   const snapB = await viewerB.next((e) => e.session === 'B' && e.status === 'ended');
   for (const [id, snapshot, done] of [['A', snapA, doneA], ['B', snapB, doneB]]) {
-    report.sessions[id] = { stats: done.stats, original: captionText(snapshot.original), spanish: captionText(snapshot.spanish), translationError: snapshot.translationError };
+    report.sessions[id] = { stats: done.stats, original: captionText(snapshot.original), spanish: captionText(snapshot.spanish), translationError: snapshot.translationError,
+      timeline: producers.get(id).events.filter((e) => ['interim', 'final', 'translation-interim', 'translation-final'].includes(e.type)).map(({type, text, elapsedMs, translationMs}) => ({type, text, elapsedMs, translationMs})) };
+  }
+  for (const [id, done] of [['A', doneA], ['B', doneB]]) {
     assert.ok(done.stats.textBeforeEnd, `${id}: faltó original durante audio`);
     assert.ok(done.stats.translationBeforeEnd, `${id}: faltó traducción durante audio`);
     assert.equal(done.stats.translationErrors, 0, `${id}: errores de traducción`);
     assert.equal(done.stats.pendingTranslations, 0, `${id}: traducciones pendientes`);
+    assert.equal(Boolean(done.stats.pendingOriginal), false, `${id}: original sin confirmar`);
+    if (process.env.SPEECH_PROVIDER === 'local') {
+      const timeline = report.sessions[id].timeline;
+      const firstFinal = timeline.find((e) => e.type === 'final');
+      assert.ok(timeline.some((e) => e.type === 'interim' && e.elapsedMs < firstFinal.elapsedMs), `${id}: falta original provisional antes del final`);
+      assert.ok(timeline.some((e) => e.type === 'translation-interim' && e.text && e.elapsedMs < firstFinal.elapsedMs), `${id}: falta traducción provisional antes del final`);
+      assert.ok(done.stats.interimEvents >= 10, `${id}: faltan actualizaciones durante la voz`);
+    }
   }
   assert.match(report.sessions.A.original, /workshop/i);
   assert.match(report.sessions.A.spanish, /taller/i);
@@ -61,7 +74,7 @@ try {
   assert.match(report.sessions.A.original, /joining us today/i, 'A: falta la última frase original');
   assert.match(report.sessions.A.spanish, /acompañar.*hoy/i, 'A: falta la última frase traducida');
   assert.match(report.sessions.B.original, /end of our second session/i, 'B: falta la última frase original');
-  assert.match(report.sessions.B.spanish, /(?:fin|final) de nuestra segunda sesión/i, 'B: falta la última frase traducida');
+  assert.match(report.sessions.B.spanish, /(?:fin|final) de nuestr[oa] segund[oa] (?:sesión|período de sesiones)/i, 'B: falta la última frase traducida');
   viewerA.send({ type: 'watch', session: 'B' });
   const switched = await viewerA.next((e) => e.session === 'B' && e.status === 'ended');
   assert.equal(captionText(switched.original), report.sessions.B.original);
@@ -74,6 +87,15 @@ try {
   report.error = String(error.message).replaceAll(process.env.GEMINI_API_KEY || '__absent__', '[CLAVE OCULTA]');
   process.exitCode = 1;
 } finally {
+  for (const [id, client] of producers) {
+    const snapshots = client.events.filter((e) => e.type === 'snapshot');
+    const last = snapshots.at(-1);
+    report.sessions[id] ||= {
+      original: last ? captionText(last.original) : '', spanish: last ? captionText(last.spanish) : '',
+      status: last?.status, errors: client.events.filter((e) => e.type === 'error' || e.type === 'translation-error').map((e) => e.message),
+      note: 'Prueba interrumpida antes del resultado final.',
+    };
+  }
   for (const client of clients) client.ws.terminate();
   for (const ws of wss.clients) ws.terminate();
   wss.close(); server.closeAllConnections(); server.close();

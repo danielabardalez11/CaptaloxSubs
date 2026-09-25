@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Room } from '../src/room.js';
+
+test('sin traducción no presenta el original inglés como español', () => {
+  const room = new Room('A'); room.reset('en', false);
+  room.accept({ type: 'final', text: 'Hello there.' });
+  assert.deepEqual(room.snapshot().original.history, ['Hello there.']);
+  assert.deepEqual(room.snapshot().spanish.history, []);
+});
 test('fragmentos de traducción y original forman frases sin duplicación', () => {
   const room = new Room('A'); room.reset('en', true);
   room.accept({ type: 'original', text: 'The work' }); room.accept({ type: 'original', text: 'shop starts at ten. Next' });

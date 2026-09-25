@@ -22,13 +22,14 @@ test('protocolo simulado: setup, PCM intacto, provisionales, finales y fin de au
     }
     if (message.realtimeInput?.audioStreamEnd) ws.send(JSON.stringify({ serverContent: { inputTranscription: { text: 'Final.' } } }));
   });
-  const live = new LiveTranscriber({ apiKey: 'fake', endpoint, language: 'es' });
+  const live = new LiveTranscriber({ apiKey: 'fake', endpoint, language: 'es', model: 'gemini-3.5-transcribe-live' });
   t.after(() => live.close());
   const events = []; live.on('event', (event) => events.push(event));
   await live.connect();
   const received = once(live, 'event'); live.sendAudio(pcm); await received;
   assert.deepEqual(messages[0].setup.generationConfig.responseModalities, ['TEXT']);
   assert.deepEqual(messages[0].setup.inputAudioTranscription.languageCodes, ['es-419']);
+  assert.equal(messages[0].setup.realtimeInputConfig.automaticActivityDetection.silenceDurationMs, 200);
   assert.deepEqual(Buffer.from(messages[1].realtimeInput.audio.data, 'base64'), pcm);
   assert.equal(messages[1].realtimeInput.audio.mimeType, 'audio/pcm;rate=16000');
   assert.deepEqual(events.map((event) => event.type), ['ready', 'interim', 'final']);
@@ -39,6 +40,37 @@ test('protocolo simulado: setup, PCM intacto, provisionales, finales y fin de au
   assert.throws(() => live.sendAudio(pcm), /no está lista/);
 });
 test('falta de clave falla antes de abrir red', () => assert.throws(() => new LiveTranscriber({ apiKey: '' }), /GEMINI_API_KEY/));
+
+test('Flash Live toma solo transcripción de entrada; no publica respuestas del asistente', async (t) => {
+  let setup;
+  const endpoint = await fake(t, (ws, message) => {
+    if (message.setup) { setup = message.setup; ws.send(JSON.stringify({ setupComplete: {} })); }
+    if (message.realtimeInput?.audio) ws.send(JSON.stringify({ serverContent: {
+      inputTranscription: { text: 'Conference speech.' },
+      modelTurn: { parts: [{ text: 'Assistant response must never be a caption.' }] },
+    } }));
+  });
+  const live = new LiveTranscriber({ apiKey: 'fake', endpoint, model: 'gemini-3.1-flash-live-preview', language: 'en' });
+  t.after(() => live.close()); await live.connect();
+  assert.deepEqual(setup.generationConfig.responseModalities, ['AUDIO']);
+  assert.deepEqual(setup.inputAudioTranscription, {});
+  assert.equal(setup.outputAudioTranscription, undefined);
+  assert.equal(setup.generationConfig.translationConfig, undefined);
+  const result = once(live, 'event'); live.sendAudio(Buffer.alloc(3200));
+  assert.deepEqual((await result)[0].text, 'Conference speech.');
+  assert.equal(live.report().finalEvents, 1);
+});
+
+test('audio sostenido sin texto informa bloqueo; el silencio no lo dispara', async (t) => {
+  const endpoint = await fake(t, (ws, message) => { if (message.setup) ws.send(JSON.stringify({ setupComplete: {} })); });
+  const live = new LiveTranscriber({ apiKey: 'fake', endpoint, stallAudioMs: 300 });
+  t.after(() => live.close()); await live.connect();
+  for (let i = 0; i < 10; i++) live.sendAudio(Buffer.alloc(3200));
+  const voice = Buffer.alloc(3200); for (let i = 0; i < voice.length; i += 2) voice.writeInt16LE(5000, i);
+  live.sendAudio(voice); live.sendAudio(voice);
+  assert.throws(() => live.sendAudio(voice), /Gemini no devuelve texto/);
+});
+
 test('error remoto oculta la clave y rechaza conexión', async (t) => {
   const endpoint = await fake(t, (ws) => ws.send(JSON.stringify({ error: { message: 'Bad secret-test' } })));
   const live = new LiveTranscriber({ apiKey: 'secret-test', endpoint });

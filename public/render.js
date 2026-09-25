@@ -11,9 +11,12 @@ export function renderCaptions(element, captions, placeholder = 'Esperando audio
   if (!text && !captions.interim) element.textContent = placeholder;
 }
 export function spanishPlaceholder(snapshot) {
+  if (snapshot.language === 'es') {
+    return snapshot.translate ? 'Esperando traducción al inglés…' : 'Traducción desactivada.';
+  }
   return snapshot.language === 'es' || snapshot.translate ? 'Esperando texto en español…' : 'El emisor no activó la traducción.';
 }
 export function roomStatus(snapshot) {
-  const labels = { idle: 'Esperando emisor', connecting: 'Conectando con Gemini', live: 'En vivo', draining: 'Recibiendo los últimos subtítulos', ended: 'Sesión terminada', error: 'Sesión interrumpida' };
+  const labels = { idle: 'Esperando emisor', connecting: 'Preparando audio', live: 'En vivo', draining: 'Recibiendo los últimos subtítulos', ended: 'Sesión terminada', error: 'Sesión interrumpida' };
   return `Sesión ${snapshot.session} · ${labels[snapshot.status] || snapshot.status}${snapshot.message ? `: ${snapshot.message}` : ''}`;
 }

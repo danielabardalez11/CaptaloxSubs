@@ -7,13 +7,14 @@ const ENDPOINT = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativ
 
 // One instance owns one upstream connection. Never share it between sessions.
 export class LiveTranscriber extends EventEmitter {
-  constructor({ apiKey, mode = 'transcribe', model = mode === 'translate' ? TRANSLATE_MODEL : MODEL, language = 'auto', endpoint = ENDPOINT, setupTimeout = 15000, targetLanguage }) {
+  constructor({ apiKey, mode = 'transcribe', model = mode === 'translate' ? TRANSLATE_MODEL : MODEL, language = 'auto', endpoint = ENDPOINT, setupTimeout = 15000, targetLanguage, stallAudioMs = 8000 }) {
     super();
     if (!apiKey) throw new Error('Falta GEMINI_API_KEY en .env.');
     if (!['auto', 'es', 'en'].includes(language)) throw new Error('Idioma inválido.');
     if (!['transcribe', 'translate'].includes(mode)) throw new Error('Modo inválido.');
     Object.assign(this, { apiKey, model, mode, language, endpoint, setupTimeout, targetLanguage });
     this.state = 'new';
+    this.unansweredSpeechMs = 0; this.stallAudioMs = stallAudioMs;
     this.stats = { bytes: 0, chunks: 0, interimEvents: 0, finalEvents: 0, originalEvents: 0, firstTextMs: null, textBeforeEnd: false, translationEvents: 0, firstTranslationMs: null, translationBeforeEnd: false };
   }
 
@@ -37,18 +38,22 @@ export class LiveTranscriber extends EventEmitter {
       };
       this.setupTimer = setTimeout(() => fail('Gemini no confirmó la sesión en 15 segundos.'), this.setupTimeout);
       const targetLang = this.targetLanguage || (this.language === 'es' ? 'en' : 'es');
+      const conversationInput = this.model === 'gemini-3.1-flash-live-preview';
       const setup = this.mode === 'translate' ? {
         model: `models/${this.model.replace(/^models\//, '')}`,
         generationConfig: {
           responseModalities: ['AUDIO'],
           translationConfig: { targetLanguageCode: targetLang, echoTargetLanguage: true },
         },
-        inputAudioTranscription: {},
+        inputAudioTranscription: this.language === 'auto' ? {} : { languageCodes: [this.language === 'es' ? 'es-419' : 'en-US'] },
         outputAudioTranscription: {},
+        realtimeInputConfig: { automaticActivityDetection: { silenceDurationMs: 100, prefixPaddingMs: 50 } },
       } : {
         model: `models/${this.model.replace(/^models\//, '')}`,
-        generationConfig: { responseModalities: ['TEXT'] },
-        inputAudioTranscription: { languageCodes: this.language === 'auto' ? [] : [this.language === 'es' ? 'es-419' : 'en-US'] },
+        generationConfig: { responseModalities: [conversationInput ? 'AUDIO' : 'TEXT'] },
+        inputAudioTranscription: conversationInput ? {} : { languageCodes: this.language === 'auto' ? [] : [this.language === 'es' ? 'es-419' : 'en-US'] },
+        ...(conversationInput ? { systemInstruction: { parts: [{ text: 'You are listening to a conference. Stay silent. Do not answer, translate or comment.' }] } } : {}),
+        realtimeInputConfig: { automaticActivityDetection: { silenceDurationMs: 200, prefixPaddingMs: 100 } },
       };
       ws.on('open', () => ws.send(JSON.stringify({ setup })));
       ws.on('message', (data) => {
@@ -67,6 +72,8 @@ export class LiveTranscriber extends EventEmitter {
         for (const [field, type] of [['interimInputTranscription', 'interim'], ['inputTranscription', 'final']]) {
           const text = content?.[field]?.text;
           if (!text) continue;
+          this.unansweredSpeechMs = 0;
+          this.stats.pendingOriginal = type === 'interim';
           if (type === 'interim') this.stats.interimEvents++;
           else {
             this.stats.originalEvents++;
@@ -96,6 +103,12 @@ export class LiveTranscriber extends EventEmitter {
     if (this.state !== 'ready') throw new Error('La sesión no está lista para audio.');
     if (!data.length || data.length % 2 || data.length > 6400) throw new Error('Fragmento PCM inválido (máximo 200 ms).');
     if (this.ws.bufferedAmount > 64000) throw new Error('La conexión está atrasada. Reiniciá la prueba.');
+    let energy = 0;
+    for (let i = 0; i < data.length; i += 2) energy += (data.readInt16LE(i) / 32768) ** 2;
+    // Heuristic: silence alone must not fail a session. Sustained noise can also
+    // trigger this guard; report it as missing text, never as a confirmed outage.
+    if (Math.sqrt(energy / (data.length / 2)) >= 0.008) this.unansweredSpeechMs += data.length / 32;
+    if (this.unansweredSpeechMs >= this.stallAudioMs) throw new Error('Llega audio con señal, pero Gemini no devuelve texto. Esta sala puede estar bloqueada; revisá la entrada y reiniciá solo esta sala.');
     this.startedAt ??= Date.now();
     this.stats.bytes += data.length;
     this.stats.chunks++;
@@ -105,6 +118,12 @@ export class LiveTranscriber extends EventEmitter {
   endAudio() {
     if (this.state !== 'ready') return;
     this.state = 'draining';
+    if (this.model === 'gemini-3.1-flash-live-preview') {
+      // Finish the last spoken word with a short silent tail for server VAD.
+      // This is padding, not captured speech, and is excluded from source stats.
+      const silence = Buffer.alloc(6400).toString('base64');
+      for (let i = 0; i < 2; i++) this.ws.send(JSON.stringify({ realtimeInput: { audio: { data: silence, mimeType: 'audio/pcm;rate=16000' } } }));
+    }
     this.ws.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
   }
 

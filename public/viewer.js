@@ -15,8 +15,8 @@ try {
   } else if (savedSession && validSessions.includes(savedSession)) {
     $('session').value = savedSession;
   }
-  if (['es', 'en', 'original'].includes(initial.get('language'))) $('language').value = initial.get('language');
-  else if (['es', 'en', 'original'].includes(savedLanguage)) $('language').value = savedLanguage;
+  if (['es', 'original'].includes(initial.get('language'))) $('language').value = initial.get('language');
+  else if (['es', 'original'].includes(savedLanguage)) $('language').value = savedLanguage;
 } catch {}
 
 function render() {

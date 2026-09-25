@@ -21,8 +21,12 @@ $('language').onchange = () => {
   const isEs = $('language').value === 'es';
   if ($('translate-label')) {
     $('translate-label').textContent = isEs
-      ? 'Traducir del español al inglés (opcional jurados)'
+      ? 'Traducir del español al inglés'
       : 'Traducir del inglés al español';
+  }
+  const translatedTitle = $('translated-title');
+  if (translatedTitle) {
+    translatedTitle.textContent = isEs ? 'Inglés (Traducción)' : 'Español (Traducción)';
   }
   buttons(Boolean(active));
 };
@@ -52,9 +56,10 @@ document.addEventListener('click', () => {
   }
 });
 async function releaseAudio(run) {
+  clearTimeout(run.flushTimer);
+  clearTimeout(run.finishTimer);
   if (run.released) return;
   run.released = true;
-  clearTimeout(run.flushTimer);
   clearInterval(run.signalTimer);
   if (active === run) { $('level').value = 0; $('signal').textContent = 'Sin captura'; $('resume').hidden = true; }
   run.stream?.getTracks().forEach((track) => track.stop());
@@ -67,30 +72,26 @@ async function fail(run, message) {
   if (active === run) status(message);
   await releaseAudio(run);
   run.ws?.close();
-  if (active === run) { active = null; buttons(false); }
+  if (!run.ws && active === run) { active = null; buttons(false); }
 }
 function stop(run) {
   if (run.stopping) return;
   run.stopping = true; $('stop').disabled = true;
   status('Finalizando sesión y esperando últimos subtítulos…');
   try { run.capture?.port.postMessage('stop'); } catch {}
-  if (run.ws?.readyState === WebSocket.OPEN) {
-    run.ws.send(JSON.stringify({ type: 'stop' }));
-  }
-  run.flushTimer = setTimeout(async () => {
-    if (active === run) {
-      await releaseAudio(run);
-      run.ws?.close();
-      active = null; buttons(false);
-      status('Sesión finalizada. Lista para iniciar otra.');
-    }
-  }, 3500);
+  run.flushTimer = setTimeout(() => fail(run, 'La captura no respondió al cierre. Revisá la última frase antes de reiniciar.'), 3000);
 }
 function render(snapshot) {
+  const isEs = snapshot.language === 'es';
+  const targetCaptions = isEs ? (snapshot.english || snapshot.translated) : snapshot.spanish;
+  const translatedTitle = $('translated-title');
+  if (translatedTitle) {
+    translatedTitle.textContent = isEs ? 'Inglés (Traducción)' : 'Español (Traducción)';
+  }
   renderCaptions($('original'), snapshot.original);
-  renderCaptions($('spanish'), snapshot.spanish, spanishPlaceholder(snapshot));
+  renderCaptions($('spanish'), targetCaptions, spanishPlaceholder(snapshot));
   $('original-history').textContent = captionText(snapshot.original);
-  $('spanish-history').textContent = captionText(snapshot.spanish);
+  $('spanish-history').textContent = captionText(targetCaptions);
   if (snapshot.translationError) $('spanish').append(document.createTextNode(` ⚠ ${snapshot.translationError}`));
   if (snapshot.status !== 'ended') status(roomStatus(snapshot));
 }
@@ -104,10 +105,10 @@ $('start').onclick = async () => {
   if (active) return;
   const run = active = { stopping: false, failed: false, released: false };
   buttons(true);
-  $('metrics').textContent = $('original-history').textContent = $('spanish-history').textContent = '';
+  $('original-history').textContent = $('spanish-history').textContent = '';
   $('original').textContent = $('spanish').textContent = 'Conectando…';
   try {
-    run.context = new AudioContext({ sampleRate: 16000 });
+    run.context = new AudioContext({ sampleRate: 16000, latencyHint: 'interactive' });
     await run.context.resume();
     if (run.context.sampleRate !== 16000) throw new Error('El navegador no permitió 16000 Hz. Usá Chrome o Edge.');
     if ($('source').value === 'file') {
@@ -139,12 +140,22 @@ $('start').onclick = async () => {
       if (videoTrack) videoTrack.onended = () => { if (active === run) stop(run); };
     } else {
       const filters = $('input-mode').value === 'mic';
-      run.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: filters, noiseSuppression: filters, autoGainControl: filters, ...($('device').value ? { deviceId: { exact: $('device').value } } : {}) }, video: false });
+      run.stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          latency: 0,
+          echoCancellation: filters,
+          noiseSuppression: false,
+          autoGainControl: false,
+          ...($('device').value ? { deviceId: { exact: $('device').value } } : {})
+        },
+        video: false
+      });
       run.stream.getAudioTracks()[0].onended = () => fail(run, 'La entrada de audio se desconectó. Revisá el cable o dispositivo y volvé a iniciar.');
     }
     if (run.context.state === 'suspended') await run.context.resume();
     await run.context.audioWorklet.addModule('/pcm-worklet.js');
-    status('Conectando con Gemini…');
+    status('Preparando el reconocimiento de voz…');
     const ws = run.ws = new WebSocket(`ws://${location.host}/audio`);
     ws.onopen = () => ws.send(JSON.stringify({
       type: 'start',
@@ -191,7 +202,13 @@ $('start').onclick = async () => {
           run.monitor = run.context.createGain(); run.monitor.gain.value = run.buffer && $('monitor').checked ? 1 : 0;
           run.capture.port.onmessage = ({ data: pcm }) => {
             if (ws.readyState !== WebSocket.OPEN) return;
-            if (pcm === 'flushed') { clearTimeout(run.flushTimer); ws.send(JSON.stringify({ type: 'stop' })); releaseAudio(run); return; }
+            if (pcm === 'flushed') {
+              clearTimeout(run.flushTimer);
+              ws.send(JSON.stringify({ type: 'stop' }));
+              releaseAudio(run);
+              run.finishTimer = setTimeout(() => fail(run, 'No se confirmó el cierre. Pueden faltar los últimos subtítulos.'), 30000);
+              return;
+            }
             run.lastPacket = performance.now();
             const samples = new Int16Array(pcm);
             let sum = 0, peak = 0;
@@ -221,10 +238,10 @@ $('start').onclick = async () => {
           clearTimeout(run.flushTimer);
           run.done = true;
           await releaseAudio(run);
-          active = null; buttons(false);
-          $('metrics').textContent = JSON.stringify(event.stats, null, 2);
+          console.info('Captaloxsubs: registro de sesión', event.stats);
           const s = event.stats;
-          status(s.translationErrors ? 'Hubo errores de traducción. Revisá el original y el registro.' : !s.originalEvents ? 'Sin texto original: prueba NO aprobada.' : !s.textBeforeEnd ? 'Llegó texto; falta demostrar que llega durante el audio.' : $('language').value === 'en' && $('translate').checked && !s.translationBeforeEnd ? 'Llegó el original, pero falta comprobar traducción durante el audio.' : 'Sesión finalizada correctamente.');
+          if (s.pendingOriginal) { status('Sesión finalizada con texto sin confirmar. Puede faltar la última frase.'); return; }
+          status(s.translationErrors || s.pendingTranslations ? 'Sesión finalizada con traducciones incompletas. El original sigue disponible.' : !s.originalEvents ? 'No se recibió transcripción. Revisá la entrada de audio.' : 'Sesión finalizada.');
         }
       } catch (error) { await fail(run, error.message); }
     };

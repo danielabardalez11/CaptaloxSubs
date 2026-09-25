@@ -62,6 +62,7 @@ export class Room {
     if (event.type === 'final') this.original.final(event.text, elapsed);
     if (event.type === 'original') this.original.append(event.text, elapsed);
     if (event.type === 'translation') this.translated.append(event.text, elapsed);
+    if (event.type === 'translation-interim') this.translated.interim = event.text;
     if (event.type === 'translation-final') this.translated.final(event.text, elapsed);
     if (event.type === 'translation-error') this.translationError = event.message;
     if (event.type === 'error') { this.status = 'error'; this.message = event.message; }
@@ -70,6 +71,7 @@ export class Room {
       if (this.translated.current) this.translated.final(this.translated.current, elapsed);
       this.status = 'ended';
       this.stats = event.stats;
+      if (event.stats?.pendingOriginal) this.message = 'Quedó texto provisional sin confirmar; la transcripción puede estar incompleta.';
     }
   }
   summary() { return { session: this.id, status: this.status, language: this.language, message: this.message, startedAt: this.startedAt, lastAudioAt: this.lastAudioAt, lastTextAt: this.lastTextAt, audioSeconds: this.audioBytes / 32000 }; }
@@ -82,8 +84,8 @@ export class Room {
   }
   snapshot() {
     const isSpanish = this.language === 'es';
-    const spanishCaptions = isSpanish ? this.original : (this.translate ? this.translated : this.original);
-    const englishCaptions = !isSpanish ? this.original : (this.translate ? this.translated : this.original);
+    const spanishCaptions = isSpanish ? this.original : this.translated;
+    const englishCaptions = !isSpanish ? this.original : this.translated;
     return {
       type: 'snapshot', session: this.id, run: this.run, language: this.language, translate: this.translate,
       translationError: this.translationError, status: this.status, message: this.message, stats: this.stats,

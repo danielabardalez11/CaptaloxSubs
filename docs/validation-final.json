@@ -1,0 +1,207 @@
+{
+  "date": "2026-09-25T14:51:45.106Z",
+  "source": "Dos voces sintéticas inglesas enviadas a velocidad real; API real; clientes WebSocket programáticos.",
+  "passed": true,
+  "sessions": {
+    "A": {
+      "stats": {
+        "bytes": 675200,
+        "chunks": 211,
+        "interimEvents": 0,
+        "finalEvents": 6,
+        "originalEvents": 6,
+        "firstTextMs": 2249,
+        "textBeforeEnd": true,
+        "translationEvents": 6,
+        "firstTranslationMs": 2402,
+        "translationBeforeEnd": true,
+        "pendingOriginal": false,
+        "audioSeconds": 21.1,
+        "translationErrors": 0,
+        "maxTranslationMs": 236,
+        "maxQueueWaitMs": 0,
+        "pendingTranslations": 0
+      },
+      "original": "Welcome to session one. Today we are building live captions for a programming conference. The workshop starts at 10:00 and has 20 participants. Please bring your laptop. We will take a short break and then continue with the demonstration. Thank you for joining us today.",
+      "spanish": "Bienvenidos a la sesión uno. Hoy estamos construyendo subtítulos en vivo para una conferencia de programación. El taller comienza a las 10:00 y cuenta con 20 participantes. Por favor, trae tu portátil. Tomaremos un breve descanso y luego continuaremos con la manifestación. Gracias por acompañarnos hoy.",
+      "translationError": "",
+      "timeline": [
+        {
+          "type": "final",
+          "text": "Welcome to session one.",
+          "elapsedMs": 2249
+        },
+        {
+          "type": "translation-final",
+          "text": "Bienvenidos a la sesión uno.",
+          "elapsedMs": 2402,
+          "translationMs": 153
+        },
+        {
+          "type": "final",
+          "text": " Today we are building live captions for a programming conference.",
+          "elapsedMs": 6902
+        },
+        {
+          "type": "translation-final",
+          "text": "Hoy estamos construyendo subtítulos en vivo para una conferencia de programación.",
+          "elapsedMs": 7131,
+          "translationMs": 228
+        },
+        {
+          "type": "final",
+          "text": " The workshop starts at 10:00 and has 20 participants.",
+          "elapsedMs": 11234
+        },
+        {
+          "type": "translation-final",
+          "text": "El taller comienza a las 10:00 y cuenta con 20 participantes.",
+          "elapsedMs": 11460,
+          "translationMs": 226
+        },
+        {
+          "type": "final",
+          "text": " Please bring your laptop.",
+          "elapsedMs": 13743
+        },
+        {
+          "type": "translation-final",
+          "text": "Por favor, trae tu portátil.",
+          "elapsedMs": 13875,
+          "translationMs": 131
+        },
+        {
+          "type": "final",
+          "text": " We will take a short break and then continue with the demonstration.",
+          "elapsedMs": 18336
+        },
+        {
+          "type": "translation-final",
+          "text": "Tomaremos un breve descanso y luego continuaremos con la manifestación.",
+          "elapsedMs": 18573,
+          "translationMs": 236
+        },
+        {
+          "type": "final",
+          "text": " Thank you for joining us today.",
+          "elapsedMs": 20977
+        },
+        {
+          "type": "translation-final",
+          "text": "Gracias por acompañarnos hoy.",
+          "elapsedMs": 21105,
+          "translationMs": 128
+        }
+      ]
+    },
+    "B": {
+      "stats": {
+        "bytes": 674880,
+        "chunks": 211,
+        "interimEvents": 0,
+        "finalEvents": 7,
+        "originalEvents": 7,
+        "firstTextMs": 2130,
+        "textBeforeEnd": true,
+        "translationEvents": 7,
+        "firstTranslationMs": 2282,
+        "translationBeforeEnd": true,
+        "pendingOriginal": false,
+        "audioSeconds": 21.09,
+        "translationErrors": 0,
+        "maxTranslationMs": 279,
+        "maxQueueWaitMs": 0,
+        "pendingTranslations": 0
+      },
+      "original": "Welcome to session two. The bicycle is blue. Seven riders are meeting in the park this afternoon. We are discussing healthy transport and safer streets. Please remember to wear a helmet. The weather is sunny today. This is the end of our second session.",
+      "spanish": "Bienvenidos a la sesión dos. La bicicleta es azul. Siete jinetes se reunirán en el parque esta tarde. Estamos hablando de un transporte saludable y de calles más seguras. Por favor, recuerde llevar un casco. El tiempo es soleado hoy. Este es el final de nuestro segundo período de sesiones.",
+      "translationError": "",
+      "timeline": [
+        {
+          "type": "final",
+          "text": "Welcome to session two.",
+          "elapsedMs": 2130
+        },
+        {
+          "type": "translation-final",
+          "text": "Bienvenidos a la sesión dos.",
+          "elapsedMs": 2282,
+          "translationMs": 151
+        },
+        {
+          "type": "final",
+          "text": " The bicycle is blue.",
+          "elapsedMs": 4394
+        },
+        {
+          "type": "translation-final",
+          "text": "La bicicleta es azul.",
+          "elapsedMs": 4494,
+          "translationMs": 100
+        },
+        {
+          "type": "final",
+          "text": " Seven riders are meeting in the park this afternoon.",
+          "elapsedMs": 8367
+        },
+        {
+          "type": "translation-final",
+          "text": "Siete jinetes se reunirán en el parque esta tarde.",
+          "elapsedMs": 8592,
+          "translationMs": 225
+        },
+        {
+          "type": "final",
+          "text": " We are discussing healthy transport and safer streets.",
+          "elapsedMs": 12755
+        },
+        {
+          "type": "translation-final",
+          "text": "Estamos hablando de un transporte saludable y de calles más seguras.",
+          "elapsedMs": 12995,
+          "translationMs": 240
+        },
+        {
+          "type": "final",
+          "text": " Please remember to wear a helmet.",
+          "elapsedMs": 15660
+        },
+        {
+          "type": "translation-final",
+          "text": "Por favor, recuerde llevar un casco.",
+          "elapsedMs": 15819,
+          "translationMs": 159
+        },
+        {
+          "type": "final",
+          "text": " The weather is sunny today.",
+          "elapsedMs": 17842
+        },
+        {
+          "type": "translation-final",
+          "text": "El tiempo es soleado hoy.",
+          "elapsedMs": 17959,
+          "translationMs": 117
+        },
+        {
+          "type": "final",
+          "text": " This is the end of our second session.",
+          "elapsedMs": 21020
+        },
+        {
+          "type": "translation-final",
+          "text": "Este es el final de nuestro segundo período de sesiones.",
+          "elapsedMs": 21299,
+          "translationMs": 279
+        }
+      ]
+    }
+  },
+  "checks": [
+    "Original y traducción durante audio en A y B",
+    "Marcadores de contenido separados por sesión",
+    "Última frase presente en ambos idiomas de ambas sesiones",
+    "Dos conexiones listas antes del envío paralelo",
+    "Cambio de espectador A→B con ambos textos de B"
+  ]
+}

@@ -25,6 +25,40 @@ class FakeLive extends EventEmitter {
   close() { this.state = 'closed'; }
   safe(message) { return message; }
 }
+
+test('Stop duplicado espera el último texto y su traducción; los modelos usan la ruta de texto', async (t) => {
+  let options;
+  class TailLive extends FakeLive {
+    async flush() {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      this.emit('event', { type: 'final', text: 'Last sentence.' });
+      this.emit('event', { type: 'translation-final', text: 'Última frase.' });
+    }
+  }
+  const { host, rooms } = await app(t, { apiKey: 'fake', model: 'transcriber', translateModel: 'text-translator', drainMs: 10, makeLive: (o) => { options = o; return new TailLive(o); } });
+  const emitter = await producer(host, 'A');
+  emitter.send(Buffer.alloc(3200, 1));
+  emitter.send({ type: 'stop' }); emitter.send({ type: 'stop' });
+  await emitter.next((e) => e.type === 'done');
+  assert.equal(options.model, 'transcriber');
+  assert.equal(options.textModel, 'text-translator');
+  assert.equal(options.mode, 'translate');
+  assert.deepEqual(rooms.get('A').snapshot().spanish.history, ['Última frase.']);
+  assert.equal(emitter.events.filter((e) => e.type === 'done').length, 1);
+  assert.ok(!emitter.events.some((e) => e.type === 'error'));
+});
+
+test('eventos tardíos del emisor anterior no contaminan una sala reiniciada', async (t) => {
+  const lives = [];
+  const { host, rooms } = await app(t, { apiKey: 'fake', makeLive: (o) => { const live = new FakeLive(o); lives.push(live); return live; } });
+  const first = await producer(host, 'A');
+  first.ws.close(); await once(first.ws, 'close');
+  await producer(host, 'A');
+  lives[0].emit('event', { type: 'final', text: 'OLD CONTENT' });
+  lives[0].emit('event', { type: 'error', message: 'OLD ERROR' });
+  assert.deepEqual(rooms.get('A').snapshot().original.history, []);
+  assert.equal(rooms.get('A').status, 'live');
+});
 async function producer(host, session, language = 'en') {
   const client = await connectClient(host, '/audio');
   client.send({ type: 'start', session, language, translate: true });
@@ -207,4 +241,3 @@ test('soporta 6 escenarios simultáneos en paralelo con aislamiento total', asyn
     producer.send({ type: 'stop' });
   }
 });
-

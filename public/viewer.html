@@ -3,29 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nerdearla 2026 · Subtítulos en Vivo</title>
+  <title>Captaloxsubs · Subtítulos en vivo</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="viewer">
 <header>
-  <h1>
-    Elegí qué charla seguir
-    <span class="brand-badge">En Vivo</span>
+  <h1>Captaloxsubs <span class="brand-badge">En Vivo</span>
   </h1>
   <div class="header-actions">
-    <a id="btn-obs" href="/viewer?session=A&overlay=1" target="_blank" rel="noopener" title="Abrir como overlay transparente para streaming en OBS Studio o vMix">Modo OBS / Stream ↗</a>
   </div>
 </header>
+<p>Elegí qué charla seguir y el idioma de tus subtítulos.</p>
 
 <div class="controls">
   <label>Escenario
     <select id="session">
       <option value="A">Sala A · Escenario Principal</option>
       <option value="B">Sala B · Escenario Secundario</option>
-      <option value="C">Sala C · Workshops</option>
-      <option value="D">Sala D · DevOps & Cloud</option>
-      <option value="E">Sala E · AI & Data</option>
-      <option value="F">Sala F · Open Source</option>
     </select>
   </label>
   <label>Subtítulos
@@ -37,8 +31,6 @@
   </label>
   <button id="stage" type="button" title="Maximiza los subtítulos para pantallas gigantes en auditorios">Modo escenario</button>
   <button id="fullscreen" type="button" title="Activa pantalla completa">Pantalla completa</button>
-  <button id="export-txt" type="button" title="Descargar transcripción completa acumulada en texto">Bajar .TXT</button>
-  <button id="export-srt" type="button" title="Descargar subtítulos estándar .SRT con marcas de tiempo">Bajar .SRT</button>
 </div>
 
 <div id="status-container" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 8px;">

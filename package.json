@@ -11,11 +11,16 @@
     "start": "node --env-file-if-exists=.env src/server.js",
     "test": "node --test",
     "transcribe": "node --env-file-if-exists=.env scripts/transcribe.js",
-    "check:live": "node --env-file-if-exists=.env scripts/check-live.js"
+    "check:live": "node --env-file-if-exists=.env scripts/check-live.js",
+    "prepare:translation": "node scripts/prepare-translation.js"
   },
   "license": "MIT",
   "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
     "qrcode": "1.5.4",
     "ws": "8.21.3"
+  },
+  "overrides": {
+    "sharp": "0.35.4"
   }
 }

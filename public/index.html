@@ -3,25 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nerdearla 2026 · Panel de Emisión</title>
+  <title>Captaloxsubs · Control de salas</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <header>
-  <h1>
-    Subtítulos en vivo
-    <span class="brand-badge">Control de Emisión</span>
+  <h1>Captaloxsubs <span class="brand-badge">Control de Emisión</span>
   </h1>
   <div class="header-actions">
     <a href="/viewer" target="_blank" rel="noopener">Abrir espectador ↗</a>
-    <a href="/demo" target="_blank" rel="noopener">Vista para grabar demo ↗</a>
+    <a href="/demo" target="_blank" rel="noopener">Abrir consola ↗</a>
   </div>
 </header>
 
-<p style="color: var(--text-muted); font-size: 15px; margin-top: -12px;">Control de producción · La captura continúa hasta Stop o una interrupción.</p>
+<p style="color: var(--text-muted); font-size: 15px; margin-top: -12px;">Cada voz, en su idioma. Subtítulos en vivo para conectar a tu audiencia.</p>
 
 <section aria-label="Estado de las salas">
-  <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--accent-cyan);">Escenarios Concurrente en Vivo</h2>
+  <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--accent-cyan);">Salas en vivo</h2>
   <div id="rooms" class="panels">Consultando estado…</div>
 </section>
 
@@ -30,16 +28,12 @@
     <select id="session">
       <option value="A">Sala A · Escenario Principal</option>
       <option value="B">Sala B · Escenario Secundario</option>
-      <option value="C">Sala C · Workshops</option>
-      <option value="D">Sala D · DevOps & Cloud</option>
-      <option value="E">Sala E · AI & Data</option>
-      <option value="F">Sala F · Open Source</option>
     </select>
   </label>
   <label>Idioma del audio
     <select id="language">
-      <option value="en">Inglés (traducción automática al español)</option>
-      <option value="es">Español (traducción automática al inglés)</option>
+      <option value="en">Inglés</option>
+      <option value="es">Español</option>
     </select>
   </label>
   <label>Fuente
@@ -75,14 +69,12 @@
   <label>Archivo WAV (16 kHz mono recomendado, hasta 3 min): <input id="file" type="file" accept="audio/*"></label>
   <br>
   <label><input id="monitor" type="checkbox"> Escuchar el archivo en los parlantes durante el envío</label>
-  <p style="font-size: 13px; color: var(--text-muted);">El archivo se envía a Gemini a velocidad real, simulando a un orador en el escenario.</p>
+  <p style="font-size: 13px; color: var(--text-muted);">El audio se reproduce y se transcribe mientras avanza.</p>
 </div>
 
 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 18px 0;">
   <button id="start" disabled>Iniciar sesión</button>
   <button id="stop" disabled>Terminar</button>
-  <button id="export-txt" type="button" title="Descargar transcripción en texto plano">Descargar .TXT</button>
-  <button id="export-srt" type="button" title="Descargar subtítulos con tiempos .SRT">Descargar .SRT</button>
 </div>
 
 <div style="display: flex; align-items: center; gap: 16px; margin: 14px 0; background: var(--bg-surface); padding: 12px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
@@ -99,22 +91,22 @@
     <div id="original" class="captions"></div>
   </section>
   <section>
-    <h2 style="font-size: 18px; color: var(--accent-cyan); margin-bottom: 8px;">Traducción en Tiempo Real</h2>
+    <h2 id="translated-title" style="font-size: 18px; color: var(--accent-cyan); margin-bottom: 8px;">Español (Traducción)</h2>
     <div id="spanish" class="captions"></div>
   </section>
 </div>
 
-<details open>
-  <summary>Métricas y registro de la sesión</summary>
-  <p style="font-size: 13px; color: var(--text-muted);">Los eventos provisionales y confirmados llegan con marcas de tiempo relativas al inicio del audio.</p>
-  <pre id="metrics"></pre>
+<details>
+  <summary>Transcripción de la sesión</summary>
+
+
   <h3 style="font-size: 15px; margin-top: 14px;">Texto original acumulado</h3>
   <p id="original-history" class="history"></p>
   <h3 style="font-size: 15px; margin-top: 14px;">Texto traducido acumulado</h3>
   <p id="spanish-history" class="history"></p>
 </details>
 
-<section id="share">
+<details id="share"><summary>Compartir con la audiencia en la misma Wi-Fi</summary>
   <h2 style="font-size: 18px; color: var(--accent-cyan); margin-bottom: 6px;">Audiencia desde el Celular (Acceso en Sala)</h2>
   <p style="font-size: 14px; color: var(--text-muted);">Cualquier asistente conectado a la misma red Wi-Fi puede escanear este código QR para abrir el visor en su teléfono.</p>
   <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 12px;">
@@ -123,8 +115,7 @@
   </div>
   <img id="qr" width="220" height="220" alt="QR para abrir los subtítulos en el celular" hidden>
   <p id="network-status" role="status" style="font-size: 13px; margin-top: 8px;"></p>
-</section>
-
+</details>
 <script type="module" src="/app.js"></script>
 </body>
 </html>

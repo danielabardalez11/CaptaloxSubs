@@ -533,3 +533,12 @@ pre, .history {
   .demo-layout { grid-template-columns: 1fr; }
   .viewer .captions { padding: 20px; font-size: clamp(24px, 5.5vw, 36px); }
 }
+
+/* Captaloxsubs */
+:root { --bg-main:#0d0718; --bg-surface:rgba(32,19,53,.86); --bg-surface-elevated:#291940; --border-subtle:rgba(187,141,255,.23); --border-focus:#c49aff; --accent-cyan:#d4b1ff; --accent-blue:#b38aff; --accent-indigo:#9755ed; --text-muted:#b7a7c9; --text-interim:#dabfff; }
+body { background:radial-gradient(ellipse at 15% 0%,#3b1758 0,transparent 48%),radial-gradient(ellipse at 95% 65%,#211b4c 0,transparent 48%),#0d0718; background-attachment:fixed; }
+.brand-badge { background:#a366ec22; border-color:#c59aff55; }
+button#start { background:linear-gradient(120deg,#8d48dc,#674bd6);color:white; }
+.captions { border-color:#b886ee44; box-shadow:0 8px 38px #0004; }
+[hidden] { display:none !important; }
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}

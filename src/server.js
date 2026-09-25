@@ -9,7 +9,21 @@ import { Room } from './room.js';
 import { audienceLinks } from './network.js';
 import QRCode from 'qrcode';
 
-export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process.env.GEMINI_TRANSCRIBE_MODEL || MODEL, translateModel = process.env.GEMINI_TRANSLATE_MODEL || TRANSLATE_MODEL, makeLive = (options) => new LiveTranscriber(options), drainMs, roomList = (process.env.ROOMS ? process.env.ROOMS.split(',').map((s) => s.trim().toUpperCase()) : ['A', 'B']) } = {}) {
+export function createApp({
+  apiKey = process.env.GEMINI_API_KEY,
+  model = process.env.GEMINI_TRANSCRIBE_MODEL || MODEL,
+  translateModel = process.env.GEMINI_TRANSLATE_MODEL || TRANSLATE_MODEL,
+  makeLive = (options) => {
+    if (process.env.TRANSLATION_PROVIDER === 'local' || process.env.SPEECH_PROVIDER === 'local') {
+      return new CaptionSession(options);
+    }
+    const chosenModel = options.mode === 'translate' ? (options.translateModel || options.model) : options.model;
+    return new LiveTranscriber({ ...options, model: chosenModel });
+  },
+  drainMs,
+  roomList = (process.env.ROOMS ? process.env.ROOMS.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean) : ['A', 'B'])
+} = {}) {
+  if (!roomList.length || roomList.some((id) => !/^[A-Z0-9_-]{1,32}$/.test(id))) throw new Error('ROOMS debe contener identificadores de salas válidos.');
   const rooms = new Map(roomList.map((id) => [id, new Room(id)]));
   const owners = new Map();
   const viewers = new Map();
@@ -25,7 +39,7 @@ export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process
     if (pathname === '/export') {
       const sessionId = (url.searchParams.get('session') || 'A').toUpperCase();
       const format = url.searchParams.get('format') === 'srt' ? 'srt' : 'txt';
-      const lang = url.searchParams.get('lang') || 'original';
+      const lang = new Map([['es', 'spanish'], ['en', 'english'], ['spanish', 'spanish'], ['english', 'english']]).get(url.searchParams.get('lang')) || 'original';
       const room = rooms.get(sessionId);
       if (!room) { res.writeHead(404); res.end('Sesión no encontrada'); return; }
       const content = room.exportTranscript(format, lang);
@@ -53,7 +67,7 @@ export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process
       catch { res.writeHead(500); res.end('No se pudo generar el QR.'); }
       return;
     }
-    if (pathname === '/health') { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ configured: Boolean(apiKey), model, translateModel })); return; }
+    if (pathname === '/health') { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ configured: process.env.SPEECH_PROVIDER === 'local' || Boolean(apiKey), model: process.env.SPEECH_PROVIDER === 'local' ? 'Vosk local (ES/EN)' : model, translateModel: process.env.TRANSLATION_PROVIDER === 'gemini' ? translateModel : 'Xenova/opus-mt-en-es (local)' })); return; }
     const file = files[pathname];
     if (!file || req.method !== 'GET') { res.writeHead(404); res.end('No encontrado'); return; }
     try { const body = await readFile(new URL(`../public/${file[0]}`, import.meta.url)); res.writeHead(200, { 'Content-Type': `${file[1]}; charset=utf-8` }); res.end(body); }
@@ -107,7 +121,7 @@ export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process
     }
     let live, timer, room, started = false, finished = false;
     const end = (message) => {
-      if (room && !finished && room.status !== 'error') { room.accept({ type: 'error', message }); publish(room); }
+      if (room && owners.get(room.id) === ws && !finished && room.status !== 'error') { room.accept({ type: 'error', message }); publish(room); }
       ws.close();
     };
     ws.on('message', async (data, binary) => {
@@ -128,29 +142,27 @@ export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process
           }
           const translate = message.translate === true && (message.language !== 'es' || message.targetLanguage === 'en');
           room = rooms.get(id); owners.set(id, ws); room.reset(message.language, translate); publish(room);
-          const chosenModel = translate ? translateModel : model;
-          live = makeLive({ apiKey, model: chosenModel, textModel: translateModel, mode: translate ? 'translate' : 'transcribe', language: message.language, targetLanguage: message.targetLanguage });
+          live = makeLive({ apiKey, model, translateModel, textModel: translateModel, mode: translate ? 'translate' : 'transcribe', language: message.language, targetLanguage: message.targetLanguage, preview: message.preview ?? true });
           live.on('event', (event) => {
+            if (owners.get(room.id) !== ws) return;
             room.accept(event); publish(room); send(ws, event);
             if (event.type === 'error') ws.close();
           });
           await live.connect();
           if (ws.readyState !== WebSocket.OPEN) live.close();
         } else if (message.type === 'stop') {
-          if (live && live.state !== 'closed') {
+          if (live?.state === 'draining') return;
+          if (live?.state === 'ready') {
             live.endAudio(); room.status = 'draining'; publish(room);
             timer = setTimeout(async () => {
               try {
-                await Promise.race([
-                  live.flush?.(),
-                  new Promise((resolve) => setTimeout(resolve, 2500))
-                ]);
-              } catch {}
-              if (ws.readyState !== WebSocket.OPEN) return;
+                await live.flush?.();
+              } catch (error) { if (owners.get(room.id) === ws) room.accept({ type: 'translation-error', message: live.safe(error.message) }); }
+              if (ws.readyState !== WebSocket.OPEN || owners.get(room.id) !== ws) return;
               const event = { type: 'done', stats: live.report() };
               finished = true; room.accept(event); publish(room); send(ws, event);
               live.close(); ws.close();
-            }, drainMs ?? 600);
+            }, drainMs ?? 1500);
           } else {
             ws.close();
           }

@@ -2,6 +2,9 @@
 .env.*
 !.env.example
 node_modules/
+.cache/
+.venv/
+__pycache__/
 recordings/*
 !recordings/demo-en.wav
 !recordings/demo-b-en.wav

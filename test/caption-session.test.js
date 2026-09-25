@@ -3,6 +3,17 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { CaptionSession, translateText } from '../src/caption-session.js';
 
+test('traducción usa un segundo modelo ante 503 sin alterar el texto confirmado', async () => {
+  const requests = [];
+  const text = await translateText({ apiKey: 'fake-key', model: 'gemini-3.1-flash-lite', text: 'Hello.', fetchImpl: async (url, options) => {
+    requests.push({ url, text: JSON.parse(options.body).contents[0].parts[0].text });
+    return requests.length === 1 ? { ok: false, status: 503 } : { ok: true, json: async () => ({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: 'Hola.' }] } }] }) };
+  } });
+  assert.equal(text, 'Hola.'); assert.equal(requests.length, 2);
+  assert.match(requests[1].url, /gemini-3.5-flash-lite/);
+  assert.deepEqual(requests.map((r) => r.text), ['Hello.', 'Hello.']);
+});
+
 class Recognizer extends EventEmitter {
   state = 'ready'; startedAt = Date.now();
   safe(message) { return String(message).replaceAll('fake-key', '[CLAVE OCULTA]'); }
@@ -39,6 +50,22 @@ test('fallo de traducción es visible y no detiene el original', async () => {
   assert.ok(!events[1].message.includes('fake-key'));
   assert.equal(session.report().translationErrors, 1); session.close();
 });
+
+test('una respuesta lenta agrupa solo confirmados pendientes sin perder texto ni esperar más audio', async () => {
+  const upstream = new Recognizer(); const requests = []; const events = []; let finish;
+  const session = new CaptionSession({ apiKey: 'fake-key', mode: 'translate', upstream, translate: async ({ text }) => {
+    requests.push(text);
+    if (requests.length === 1) await new Promise((resolve) => { finish = resolve; });
+    return `ES ${text}`;
+  } });
+  session.on('event', (event) => events.push(event));
+  for (const text of ['One.', 'Two.', 'Three.']) upstream.emit('event', { type: 'final', text });
+  upstream.emit('event', { type: 'interim', text: 'Tentative' });
+  finish(); await session.flush();
+  assert.deepEqual(requests, ['One.', 'Two. Three.']);
+  assert.deepEqual(events.filter((e) => e.type === 'translation-final').map((e) => e.text), ['ES One.', 'ES Two. Three.']);
+  assert.equal(session.report().pendingTranslations, 0); session.close();
+});
 test('cola tiene límite y cerrar descarta respuestas tardías', async () => {
   const upstream = new Recognizer(); const events = []; let finish;
   const session = new CaptionSession({ apiKey: 'fake-key', mode: 'translate', upstream, translate: () => new Promise((resolve) => { finish = resolve; }) });
@@ -56,6 +83,7 @@ test('REST: clave solo en cabecera, instrucción separada y salida completa', as
   assert.ok(!request.url.includes('fake-key'));
   assert.equal(request.headers['x-goog-api-key'], 'fake-key');
   assert.equal(JSON.parse(request.body).contents[0].parts[0].text, 'twenty');
+  assert.equal(JSON.parse(request.body).generationConfig.thinkingConfig.thinkingLevel, 'minimal');
   await assert.rejects(translateText({ text: 'a', apiKey: 'fake-key', fetchImpl: async () => ({ ok: false, status: 429 }) }), /HTTP 429/);
   await assert.rejects(translateText({ text: 'a', apiKey: 'fake-key', fetchImpl: async () => ({ ok: true, json: async () => ({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: 'incompleta' }] } }] }) }) }), /no terminó/);
 });
@@ -83,4 +111,3 @@ test('REST: soporte bidireccional ES a EN con glosario técnico', async () => {
   assert.match(sysInst, /Kubernetes/);
   assert.match(sysInst, /pull request/);
 });
-
