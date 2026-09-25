@@ -11,6 +11,7 @@ function buttons(busy) {
   $('translate').disabled = busy;
   $('start').disabled = busy || !configured;
   if (!busy) $('stop').disabled = true;
+}
 $('source').onchange = () => {
   $('file-controls').hidden = $('source').value !== 'file';
   $('mic-controls').hidden = $('source').value !== 'mic';
