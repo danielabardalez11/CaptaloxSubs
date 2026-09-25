@@ -2,8 +2,8 @@ import { EventEmitter } from 'node:events';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { LiveTranscriber } from './live.js';
 
-export const TEXT_MODEL = 'gemini-3.1-flash-lite';
-export async function translateText({ apiKey, text, model = TEXT_MODEL, signal, fetchImpl = fetch, maxRetries = 2, retryDelay = 400, from = 'en', to = 'es' }) {
+export const TEXT_MODEL = 'gemini-3.5-flash-lite';
+export async function translateText({ apiKey, text, model = TEXT_MODEL, signal, fetchImpl = fetch, maxRetries = 1, retryDelay = 200, from = 'en', to = 'es' }) {
   let lastError;
   const isEsToEn = from === 'es' || to === 'en';
   const direction = isEsToEn
@@ -19,7 +19,7 @@ export async function translateText({ apiKey, text, model = TEXT_MODEL, signal, 
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemText }] },
         contents: [{ role: 'user', parts: [{ text }] }],
-        generationConfig: { temperature: 0, maxOutputTokens: 256 },
+        generationConfig: { temperature: 0, maxOutputTokens: 96 },
       }),
     });
     if (!response.ok) {
@@ -72,7 +72,7 @@ export class CaptionSession extends EventEmitter {
       while (this.queue.length && !this.closed) {
         const text = this.queue.shift();
         this.abort = new AbortController();
-        const timeout = setTimeout(() => this.abort.abort(), 20000);
+        const timeout = setTimeout(() => this.abort.abort(), 3500);
         try {
           const translated = await this.translate({ apiKey: this.apiKey, text, model: this.textModel, signal: this.abort.signal, from: this.language, to: this.targetLanguage });
           if (this.closed) break;
@@ -82,13 +82,13 @@ export class CaptionSession extends EventEmitter {
           if (this.state === 'ready') this.translationStats.translationBeforeEnd = true;
           this.emit('event', { type: 'translation-final', text: translated, elapsedMs, targetLanguage: this.targetLanguage });
         } catch (error) {
-          if (!this.closed) this.translationError(error.name === 'AbortError' ? 'La traducción tardó más de 20 segundos. Hay un segmento sin traducir.' : error.message);
+          if (!this.closed) this.translationError(error.name === 'AbortError' ? 'La traducción demoró más de 3 segundos; se prioriza el audio en vivo.' : error.message);
         } finally { clearTimeout(timeout); }
       }
     } finally { this.busy = false; }
   }
   async flush() {
-    const deadline = Date.now() + 20000;
+    const deadline = Date.now() + 5000;
     while ((this.busy || this.queue.length) && !this.closed && Date.now() < deadline) await sleep(50);
     if (!this.closed && (this.busy || this.queue.length)) this.translationError('Quedaron traducciones pendientes al cerrar. Revisá el texto original.');
   }

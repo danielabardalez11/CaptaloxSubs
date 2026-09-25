@@ -63,7 +63,12 @@ export class Room {
     if (event.type === 'original') this.original.append(event.text, elapsed);
     if (event.type === 'translation') this.translated.append(event.text, elapsed);
     if (event.type === 'translation-final') this.translated.final(event.text, elapsed);
-    if (event.type === 'translation-error') this.translationError = event.message;
+    if (event.type === 'translation-error') {
+      this.translationError = event.message;
+      if (this.translate && this.translated.interim) {
+        this.translated.final(this.translated.interim, elapsed);
+      }
+    }
     if (event.type === 'error') { this.status = 'error'; this.message = event.message; }
     if (event.type === 'done') { this.status = 'ended'; this.stats = event.stats; }
   }
