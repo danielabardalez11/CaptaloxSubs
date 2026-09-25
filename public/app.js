@@ -11,8 +11,11 @@ function buttons(busy) {
   $('translate').disabled = busy;
   $('start').disabled = busy || !configured;
   if (!busy) $('stop').disabled = true;
-}
-$('source').onchange = () => { $('file-controls').hidden = $('source').value !== 'file'; $('mic-controls').hidden = $('source').value !== 'mic'; };
+$('source').onchange = () => {
+  $('file-controls').hidden = $('source').value !== 'file';
+  $('mic-controls').hidden = $('source').value !== 'mic';
+  if ($('tab-controls')) $('tab-controls').hidden = $('source').value !== 'tab';
+};
 $('language').onchange = () => {
   const isEs = $('language').value === 'es';
   if ($('translate-label')) {
@@ -92,6 +95,20 @@ $('start').onclick = async () => {
       if (file.size > 25 * 1024 * 1024) throw new Error('Usá un archivo de hasta 25 MB.');
       run.buffer = await run.context.decodeAudioData(await file.arrayBuffer());
       if (run.buffer.duration > 180) throw new Error('Usá un audio de hasta 3 minutos.');
+    } else if ($('source').value === 'tab') {
+      status('Seleccioná la pestaña de YouTube y marcá "Compartir audio"…');
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      });
+      const audioTrack = displayStream.getAudioTracks()[0];
+      if (!audioTrack) {
+        displayStream.getTracks().forEach((track) => track.stop());
+        throw new Error('No marcaste la casilla "Compartir audio de la pestaña". Volvé a intentar.');
+      }
+      displayStream.getVideoTracks().forEach((track) => track.stop());
+      run.stream = new MediaStream([audioTrack]);
+      run.stream.getAudioTracks()[0].onended = () => stop(run);
     } else {
       const filters = $('input-mode').value === 'mic';
       run.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: filters, noiseSuppression: filters, autoGainControl: filters, ...($('device').value ? { deviceId: { exact: $('device').value } } : {}) }, video: false });
