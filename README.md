@@ -84,13 +84,3 @@ npm test
 ```
 Ejecuta las 38 pruebas unitarias automatizadas (100% passing).
 
----
-
-## Guion para Grabar la Demo en 1–2 Minutos
-
-Abrir: **[http://localhost:3000/demo](http://localhost:3000/demo)**
-
-1. **0:00–0:15 (Introducción)**: Presentar CaptaloxSubs: "Subtítulos en tiempo real para Nerdearla 2026. A la izquierda tenemos el panel del emisor y a la derecha la pantalla en vivo de la audiencia."
-2. **0:15–0:40 (Audio y Traducción en Streaming)**: En el emisor, seleccionar la fuente (YouTube o Micrófono), verificar que 'Traducir' esté activo y pulsar **Iniciar sesión**. Mostrar cómo las palabras en español aparecen inmediatamente en pantalla a medida que la persona habla en inglés.
-3. **0:40–1:05 (Salas independientes y Audiencia)**: Demostrar el cambio de salas (Sala A y Sala B) y cómo los asistentes pueden alternar entre idioma original y traducción en el visor o escanear el QR desde sus celulares.
-4. **1:05–1:20 (Cierre y Exportación)**: Pulsar **Terminar sesión**. Descargar los subtítulos en formato `.srt` y destacar la arquitectura segura de doble puerto y costo $0.
