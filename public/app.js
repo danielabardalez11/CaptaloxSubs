@@ -57,14 +57,24 @@ async function fail(run, message) {
   if (active === run) status(message);
   await releaseAudio(run);
   run.ws?.close();
-  if (!run.ws && active === run) { active = null; buttons(false); }
+  if (active === run) { active = null; buttons(false); }
 }
 function stop(run) {
   if (run.stopping) return;
   run.stopping = true; $('stop').disabled = true;
-  status('Esperando los últimos subtítulos (hasta 20 segundos con traducción)…');
-  run.capture?.port.postMessage('stop');
-  run.flushTimer = setTimeout(() => fail(run, 'La captura no respondió al cierre. Reiniciá la sesión.'), 3000);
+  status('Finalizando sesión y esperando últimos subtítulos…');
+  try { run.capture?.port.postMessage('stop'); } catch {}
+  if (run.ws?.readyState === WebSocket.OPEN) {
+    run.ws.send(JSON.stringify({ type: 'stop' }));
+  }
+  run.flushTimer = setTimeout(async () => {
+    if (active === run) {
+      await releaseAudio(run);
+      run.ws?.close();
+      active = null; buttons(false);
+      status('Sesión finalizada. Lista para iniciar otra.');
+    }
+  }, 3500);
 }
 function render(snapshot) {
   renderCaptions($('original'), snapshot.original);
@@ -171,10 +181,13 @@ $('start').onclick = async () => {
         }
         if (event.type === 'error') await fail(run, event.message);
         if (event.type === 'done') {
+          clearTimeout(run.flushTimer);
           run.done = true;
+          await releaseAudio(run);
+          active = null; buttons(false);
           $('metrics').textContent = JSON.stringify(event.stats, null, 2);
           const s = event.stats;
-          status(s.translationErrors ? 'Hubo errores de traducción. Revisá el original y el registro.' : !s.originalEvents ? 'Sin texto original: prueba NO aprobada.' : !s.textBeforeEnd ? 'Llegó texto; falta demostrar que llega durante el audio.' : $('language').value === 'en' && $('translate').checked && !s.translationBeforeEnd ? 'Llegó el original, pero falta comprobar traducción durante el audio.' : 'Texto recibido durante el audio. Revisá exactitud y traducción en el registro.');
+          status(s.translationErrors ? 'Hubo errores de traducción. Revisá el original y el registro.' : !s.originalEvents ? 'Sin texto original: prueba NO aprobada.' : !s.textBeforeEnd ? 'Llegó texto; falta demostrar que llega durante el audio.' : $('language').value === 'en' && $('translate').checked && !s.translationBeforeEnd ? 'Llegó el original, pero falta comprobar traducción durante el audio.' : 'Sesión finalizada correctamente.');
         }
       } catch (error) { await fail(run, error.message); }
     };

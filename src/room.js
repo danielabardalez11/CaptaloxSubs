@@ -55,7 +55,10 @@ export class Room {
     if (['interim', 'final', 'original', 'translation', 'translation-final'].includes(event.type)) this.lastTextAt = Date.now();
     const elapsed = event.elapsedMs ?? (this.startedAt ? Date.now() - this.startedAt : 0);
     if (event.type === 'ready') this.status = 'live';
-    if (event.type === 'interim') this.original.interim = event.text;
+    if (event.type === 'interim') {
+      this.original.interim = event.text;
+      if (this.translate) this.translated.interim = event.text;
+    }
     if (event.type === 'final') this.original.final(event.text, elapsed);
     if (event.type === 'original') this.original.append(event.text, elapsed);
     if (event.type === 'translation') this.translated.append(event.text, elapsed);

@@ -19,7 +19,7 @@ export async function translateText({ apiKey, text, model = TEXT_MODEL, signal, 
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemText }] },
         contents: [{ role: 'user', parts: [{ text }] }],
-        generationConfig: { temperature: 0, maxOutputTokens: 2048 },
+        generationConfig: { temperature: 0, maxOutputTokens: 256 },
       }),
     });
     if (!response.ok) {

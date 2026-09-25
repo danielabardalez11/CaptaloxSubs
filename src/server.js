@@ -129,15 +129,24 @@ export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process
           });
           await live.connect();
           if (ws.readyState !== WebSocket.OPEN) live.close();
-        } else if (message.type === 'stop' && live?.state === 'ready') {
-          live.endAudio(); room.status = 'draining'; publish(room);
-          timer = setTimeout(async () => {
-            await live.flush?.();
-            if (ws.readyState !== WebSocket.OPEN) return;
-            const event = { type: 'done', stats: live.report() };
-            finished = true; room.accept(event); publish(room); send(ws, event);
-            live.close(); ws.close();
-          }, drainMs ?? 5000);
+        } else if (message.type === 'stop') {
+          if (live && live.state !== 'closed') {
+            live.endAudio(); room.status = 'draining'; publish(room);
+            timer = setTimeout(async () => {
+              try {
+                await Promise.race([
+                  live.flush?.(),
+                  new Promise((resolve) => setTimeout(resolve, 2500))
+                ]);
+              } catch {}
+              if (ws.readyState !== WebSocket.OPEN) return;
+              const event = { type: 'done', stats: live.report() };
+              finished = true; room.accept(event); publish(room); send(ws, event);
+              live.close(); ws.close();
+            }, drainMs ?? 600);
+          } else {
+            ws.close();
+          }
         } else throw new Error('Mensaje o estado inválido.');
       } catch (error) {
         const message = live ? live.safe(error.message) : error.message;
