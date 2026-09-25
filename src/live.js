@@ -7,12 +7,12 @@ const ENDPOINT = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativ
 
 // One instance owns one upstream connection. Never share it between sessions.
 export class LiveTranscriber extends EventEmitter {
-  constructor({ apiKey, mode = 'transcribe', model = mode === 'translate' ? TRANSLATE_MODEL : MODEL, language = 'auto', endpoint = ENDPOINT, setupTimeout = 15000 }) {
+  constructor({ apiKey, mode = 'transcribe', model = mode === 'translate' ? TRANSLATE_MODEL : MODEL, language = 'auto', endpoint = ENDPOINT, setupTimeout = 15000, targetLanguage }) {
     super();
     if (!apiKey) throw new Error('Falta GEMINI_API_KEY en .env.');
     if (!['auto', 'es', 'en'].includes(language)) throw new Error('Idioma inválido.');
     if (!['transcribe', 'translate'].includes(mode)) throw new Error('Modo inválido.');
-    Object.assign(this, { apiKey, model, mode, language, endpoint, setupTimeout });
+    Object.assign(this, { apiKey, model, mode, language, endpoint, setupTimeout, targetLanguage });
     this.state = 'new';
     this.stats = { bytes: 0, chunks: 0, interimEvents: 0, finalEvents: 0, originalEvents: 0, firstTextMs: null, textBeforeEnd: false, translationEvents: 0, firstTranslationMs: null, translationBeforeEnd: false };
   }
@@ -36,11 +36,12 @@ export class LiveTranscriber extends EventEmitter {
         this.close();
       };
       this.setupTimer = setTimeout(() => fail('Gemini no confirmó la sesión en 15 segundos.'), this.setupTimeout);
+      const targetLang = this.targetLanguage || (this.language === 'es' ? 'en' : 'es');
       const setup = this.mode === 'translate' ? {
         model: `models/${this.model.replace(/^models\//, '')}`,
         generationConfig: {
           responseModalities: ['AUDIO'],
-          translationConfig: { targetLanguageCode: 'es', echoTargetLanguage: true },
+          translationConfig: { targetLanguageCode: targetLang, echoTargetLanguage: true },
         },
         inputAudioTranscription: {},
         outputAudioTranscription: {},

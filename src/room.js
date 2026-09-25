@@ -9,6 +9,7 @@ export class Captions {
     this.fullLog.push({ text: trimmed, startMs: startMs ?? 0, endMs: endMs ?? ((startMs ?? 0) + 3500) });
   }
   append(delta, elapsedMs) {
+    if (!delta) return;
     this.current = (this.current + delta).slice(-4000);
     const sentences = this.current.split(/(?<=[.!?])\s+/);
     this.current = sentences.pop();
@@ -57,20 +58,19 @@ export class Room {
     if (event.type === 'ready') this.status = 'live';
     if (event.type === 'interim') {
       this.original.interim = event.text;
-      if (this.translate) this.translated.interim = event.text;
     }
     if (event.type === 'final') this.original.final(event.text, elapsed);
     if (event.type === 'original') this.original.append(event.text, elapsed);
     if (event.type === 'translation') this.translated.append(event.text, elapsed);
     if (event.type === 'translation-final') this.translated.final(event.text, elapsed);
-    if (event.type === 'translation-error') {
-      this.translationError = event.message;
-      if (this.translate && this.translated.interim) {
-        this.translated.final(this.translated.interim, elapsed);
-      }
-    }
+    if (event.type === 'translation-error') this.translationError = event.message;
     if (event.type === 'error') { this.status = 'error'; this.message = event.message; }
-    if (event.type === 'done') { this.status = 'ended'; this.stats = event.stats; }
+    if (event.type === 'done') {
+      if (this.original.current) this.original.final(this.original.current, elapsed);
+      if (this.translated.current) this.translated.final(this.translated.current, elapsed);
+      this.status = 'ended';
+      this.stats = event.stats;
+    }
   }
   summary() { return { session: this.id, status: this.status, language: this.language, message: this.message, startedAt: this.startedAt, lastAudioAt: this.lastAudioAt, lastTextAt: this.lastTextAt, audioSeconds: this.audioBytes / 32000 }; }
   exportTranscript(format = 'txt', lang = 'original') {

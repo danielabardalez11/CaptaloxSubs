@@ -3,13 +3,13 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
-import { MODEL } from './live.js';
+import { MODEL, TRANSLATE_MODEL, LiveTranscriber } from './live.js';
 import { CaptionSession, TEXT_MODEL } from './caption-session.js';
 import { Room } from './room.js';
 import { audienceLinks } from './network.js';
 import QRCode from 'qrcode';
 
-export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process.env.GEMINI_TRANSCRIBE_MODEL || MODEL, translateModel = process.env.GEMINI_TEXT_MODEL || TEXT_MODEL, makeLive = (options) => new CaptionSession(options), drainMs, roomList = (process.env.ROOMS ? process.env.ROOMS.split(',').map((s) => s.trim().toUpperCase()) : ['A', 'B']) } = {}) {
+export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process.env.GEMINI_TRANSCRIBE_MODEL || MODEL, translateModel = process.env.GEMINI_TRANSLATE_MODEL || TRANSLATE_MODEL, makeLive = (options) => new LiveTranscriber(options), drainMs, roomList = (process.env.ROOMS ? process.env.ROOMS.split(',').map((s) => s.trim().toUpperCase()) : ['A', 'B']) } = {}) {
   const rooms = new Map(roomList.map((id) => [id, new Room(id)]));
   const owners = new Map();
   const viewers = new Map();
@@ -128,7 +128,8 @@ export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process
           }
           const translate = message.translate === true && (message.language !== 'es' || message.targetLanguage === 'en');
           room = rooms.get(id); owners.set(id, ws); room.reset(message.language, translate); publish(room);
-          live = makeLive({ apiKey, model, textModel: translateModel, mode: translate ? 'translate' : 'transcribe', language: message.language, targetLanguage: message.targetLanguage });
+          const chosenModel = translate ? translateModel : model;
+          live = makeLive({ apiKey, model: chosenModel, textModel: translateModel, mode: translate ? 'translate' : 'transcribe', language: message.language, targetLanguage: message.targetLanguage });
           live.on('event', (event) => {
             room.accept(event); publish(room); send(ws, event);
             if (event.type === 'error') ws.close();
