@@ -62,7 +62,7 @@ CaptaloxSubs was engineered from the ground up with a clean, dependency-lean sta
 ```
 
 1. **Frontend Digital Signal Processing (DSP)**:
-   - Built a dedicated `AudioWorkletProcessor` ([`pcm-worklet.js`](file:///C:/Users/nplis/OneDrive/Documents/Proyectos%20programming/vibeathon_nerdearla/public/pcm-worklet.js)) operating on dedicated audio render threads.
+   - Built a dedicated `AudioWorkletProcessor` ([`pcm-worklet.js`](public/pcm-worklet.js)) operating on dedicated audio render threads.
    - Downsamples and normalizes incoming audio to 16-bit Little-Endian signed linear PCM at $16{,}000\text{ Hz}$:
      $$x_{\text{mono}}[n] = \frac{1}{C}\sum_{c=1}^{C} x_c[n]$$
      $$y[n] = \text{round}\left(x_{\text{mono}}[n] \cdot \begin{cases} 32768, & x < 0 \\ 32767, & x \ge 0 \end{cases}\right)$$
@@ -70,7 +70,7 @@ CaptaloxSubs was engineered from the ground up with a clean, dependency-lean sta
 
 2. **Backend Engine**:
    - Native Node.js HTTP and WebSocket server (`ws`).
-   - Stateful room managers ([`room.js`](file:///C:/Users/nplis/OneDrive/Documents/Proyectos%20programming/vibeathon_nerdearla/src/room.js)) isolating concurrent stages ($A, B, C, D, E, F$) with zero cross-talk.
+   - Stateful room managers ([`room.js`](src/room.js)) isolating concurrent stages ($A, B, C, D, E, F$) with zero cross-talk.
    - Sentence streaming accumulator that renders the current in-flight clause live while automatically committing completed sentences upon punctuation boundaries ($[\text{.!?}]$).
 
 3. **Google Gemini Live Integration**:
