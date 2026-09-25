@@ -75,12 +75,41 @@ SPEECH_PROVIDER=gemini
 npm start
 ```
 - **Panel del Emisor:** [http://localhost:3000](http://localhost:3000)
-- **Visor de la Audiencia:** [http://localhost:3000/viewer](http://localhost:3000/viewer)
-- **Vista Demo:** [http://localhost:3000/demo](http://localhost:3000/demo)
+- **Visor de la Audiencia:** [http://localhost:3000/viewer](http://localhost:3000/viewer) (o puerto `3001` para móviles en Wi-Fi)
+- **Vista Demo Todo-en-Uno (Consola Multisal):** [http://localhost:3000/demo](http://localhost:3000/demo)
 
-### 5. Pruebas Unitarias
+---
+
+### 5. Cómo Ejecutar y Probar Dos Sesiones en Simultáneo (Salas A y B)
+
+CaptaloxSubs soporta oradores y conferencias concurrentes en simultáneo con aislamiento total (cero interferencia o mezcla de audio/subtítulos entre salas). 
+
+Se puede probar de dos formas inmediatas:
+
+#### Opción A: Vista Unificada (`/demo`) — La más rápida
+1. Abrir en el navegador [http://localhost:3000/demo](http://localhost:3000/demo).
+2. Hacer clic en el botón superior **"Ambas salas"** para desplegar el emisor de la **Sala A** y de la **Sala B** en paralelo junto al visor de subtítulos.
+3. En la **Sala A**: Seleccionar fuente **Archivo** y cargar `recordings/demo-en.wav`.
+4. En la **Sala B**: Seleccionar fuente **Archivo** y cargar `recordings/demo-b-en.wav`.
+5. Presionar **Iniciar** en ambas salas:
+   - Ambas sesiones transcriben y traducen al español en tiempo real en paralelo.
+   - En el visor de audiencia de la derecha, cambiar de **Sala A** a **Sala B** para comprobar que cada sala recibe exclusivamente su propia transmisión sin mezcla de contenido.
+
+#### Opción B: Múltiples Pestañas / Pantallas
+1. **Emisor 1**: Abrir [http://localhost:3000/?session=A](http://localhost:3000/?session=A) (o micrófono del orador A / audio de YouTube).
+2. **Emisor 2**: Abrir [http://localhost:3000/?session=B](http://localhost:3000/?session=B) (cargar `recordings/demo-b-en.wav` o micrófono B).
+3. **Audiencia Sala A**: Abrir [http://localhost:3000/viewer?session=A](http://localhost:3000/viewer?session=A).
+4. **Audiencia Sala B**: Abrir [http://localhost:3000/viewer?session=B](http://localhost:3000/viewer?session=B).
+5. Iniciar la transmisión en ambas: los asistentes de la sala A y B leen los subtítulos sincronizados de su respectivo orador independientemente.
+
+---
+
+### 6. Pruebas Unitarias y Validación de Concurrencia
 ```powershell
 npm test
 ```
-Ejecuta las 38 pruebas unitarias automatizadas (100% passing).
+Ejecuta las **38 pruebas unitarias automatizadas** (100% passing), incluyendo:
+- Aislamiento entre múltiples salas paralelas (`A`, `B`, `C`, etc.).
+- Concurrencia real y separación estricta de eventos y WebSocket streams.
+- Tolerancia a desconexiones y exportación de transcripciones.
 
