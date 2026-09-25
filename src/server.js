@@ -119,7 +119,13 @@ export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process
           const id = message.session || 'A';
           if (!rooms.has(id)) throw new Error(`Elegí una sala válida (${[...rooms.keys()].join(' o ')}).`);
           if (!['es', 'en', 'auto'].includes(message.language)) throw new Error('Idioma inválido.');
-          if (owners.has(id)) throw new Error(`La sesión ${id} ya tiene un emisor. Elegí otra sesión.`);
+          const existingOwner = owners.get(id);
+          if (existingOwner && existingOwner !== ws) {
+            if (existingOwner.readyState === WebSocket.OPEN) {
+              throw new Error(`La sesión ${id} ya tiene un emisor activo. Elegí otra sala o cerrá la pestaña anterior.`);
+            }
+            owners.delete(id);
+          }
           const translate = message.translate === true && (message.language !== 'es' || message.targetLanguage === 'en');
           room = rooms.get(id); owners.set(id, ws); room.reset(message.language, translate); publish(room);
           live = makeLive({ apiKey, model, textModel: translateModel, mode: translate ? 'translate' : 'transcribe', language: message.language, targetLanguage: message.targetLanguage });
@@ -159,6 +165,9 @@ export function createApp({ apiKey = process.env.GEMINI_API_KEY, model = process
         owners.delete(room.id);
         if (!finished && room.status !== 'error') room.accept({ type: 'error', message: 'El emisor se desconectó. Volvé a iniciar esta sesión.' });
         publish(room);
+      }
+      for (const [rid, ownerWs] of owners.entries()) {
+        if (ownerWs === ws) owners.delete(rid);
       }
     });
   });

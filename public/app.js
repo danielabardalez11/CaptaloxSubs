@@ -40,7 +40,17 @@ $('devices').onclick = async () => {
   } catch { status('No se pudieron detectar las entradas. Permití el micrófono en localhost.'); }
   finally { permissionStream?.getTracks().forEach((track) => track.stop()); $('devices').disabled = Boolean(active); }
 };
-$('resume').onclick = async () => { if (active?.context) await active.context.resume(); };
+$('resume').onclick = async () => {
+  if (active?.context) {
+    await active.context.resume();
+    $('resume').hidden = active.context.state !== 'suspended';
+  }
+};
+document.addEventListener('click', () => {
+  if (active?.context && active.context.state === 'suspended') {
+    active.context.resume().catch(() => {});
+  }
+});
 async function releaseAudio(run) {
   if (run.released) return;
   run.released = true;
@@ -108,23 +118,31 @@ $('start').onclick = async () => {
       if (run.buffer.duration > 180) throw new Error('Usá un audio de hasta 3 minutos.');
     } else if ($('source').value === 'tab') {
       status('Seleccioná la pestaña de YouTube y marcá "Compartir audio"…');
-      const displayStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-      });
+      let displayStream;
+      try {
+        displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+      } catch (err) {
+        if (err.name === 'NotAllowedError') throw new Error('Se canceló la selección de pestaña.');
+        throw err;
+      }
       const audioTrack = displayStream.getAudioTracks()[0];
       if (!audioTrack) {
         displayStream.getTracks().forEach((track) => track.stop());
-        throw new Error('No marcaste la casilla "Compartir audio de la pestaña". Volvé a intentar.');
+        throw new Error('No marcaste la casilla "Compartir audio de la pestaña". Al compartir, asegurate de tildar esa opción abajo a la izquierda.');
       }
-      displayStream.getVideoTracks().forEach((track) => track.stop());
-      run.stream = new MediaStream([audioTrack]);
-      run.stream.getAudioTracks()[0].onended = () => stop(run);
+      run.stream = displayStream;
+      audioTrack.onended = () => { if (active === run) stop(run); };
+      const videoTrack = displayStream.getVideoTracks()[0];
+      if (videoTrack) videoTrack.onended = () => { if (active === run) stop(run); };
     } else {
       const filters = $('input-mode').value === 'mic';
       run.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: filters, noiseSuppression: filters, autoGainControl: filters, ...($('device').value ? { deviceId: { exact: $('device').value } } : {}) }, video: false });
       run.stream.getAudioTracks()[0].onended = () => fail(run, 'La entrada de audio se desconectó. Revisá el cable o dispositivo y volvé a iniciar.');
     }
+    if (run.context.state === 'suspended') await run.context.resume();
     await run.context.audioWorklet.addModule('/pcm-worklet.js');
     status('Conectando con Gemini…');
     const ws = run.ws = new WebSocket(`ws://${location.host}/audio`);
@@ -148,11 +166,22 @@ $('start').onclick = async () => {
         const event = JSON.parse(data);
         if (event.type === 'snapshot') render(event);
         if (event.type === 'ready') {
+          if (run.context.state === 'suspended') await run.context.resume();
           run.lastPacket = performance.now();
           run.signalTimer = setInterval(() => {
-            if (performance.now() - run.lastPacket > 3000 && !run.stopping) $('signal').textContent = 'No llegan fragmentos de audio. Revisá la entrada o reanudá el audio.';
+            if (performance.now() - run.lastPacket > 3000 && !run.stopping) {
+              $('signal').textContent = run.context.state === 'suspended'
+                ? 'Audio en pausa por el navegador. Hacé clic en "Reanudar audio".'
+                : 'No llegan fragmentos de audio. Dale Play al video o hablá al mic.';
+            }
           }, 1000);
-          run.context.onstatechange = () => { if (active === run) $('resume').hidden = run.context.state !== 'suspended'; };
+          run.context.onstatechange = () => {
+            if (active === run) {
+              const suspended = run.context.state === 'suspended';
+              $('resume').hidden = !suspended;
+              if (suspended) $('signal').textContent = 'Audio en pausa: hacé clic en "Reanudar audio"';
+            }
+          };
           if (run.buffer) {
             run.source = run.player = run.context.createBufferSource();
             run.player.buffer = run.buffer;
@@ -169,7 +198,15 @@ $('start').onclick = async () => {
             for (const sample of samples) { const value = sample / 32768; sum += value * value; peak = Math.max(peak, Math.abs(value)); }
             const rms = Math.sqrt(sum / samples.length);
             $('level').value = Math.min(1, rms * 5);
-            $('signal').textContent = peak > 0.98 ? 'Señal muy alta: bajá el nivel de la placa' : rms < 0.005 ? 'Silencio o señal baja' : 'Recibiendo audio';
+            if (peak > 0.98) {
+              $('signal').textContent = 'Señal muy alta: bajá el volumen';
+            } else if (rms < 0.005) {
+              $('signal').textContent = $('source').value === 'tab'
+                ? 'Silencio: dale Play al video de YouTube'
+                : ($('source').value === 'mic' ? 'Silencio: micrófono sin señal (si usás auriculares el mic no escucha los parlantes)' : 'Silencio');
+            } else {
+              $('signal').textContent = 'Recibiendo audio';
+            }
             if (ws.bufferedAmount > 64000) { fail(run, 'La red se atrasó. Reiniciá la sesión.'); return; }
             ws.send(pcm);
           };
